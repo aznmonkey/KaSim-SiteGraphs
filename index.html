@@ -1,0 +1,87 @@
+<html>
+<head>
+
+<!-- turns off text selection for svg canvas -->
+<style>
+body {
+  margin:0;
+  -moz-osx-font-smoothing:grayscale;
+  -webkit-font-smoothing:antialiased;
+}
+
+svg text {
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+
+#drawing {
+  margin-top:30px;
+}
+
+button {
+  background:white;
+  border:none;
+  outline:none;
+}
+
+button.active {
+  background:#ff8;
+}
+
+.split-left {width:66.5%; overflow:hidden;}
+.split-right {transform:translateX(0) !important;}
+.node { cursor: pointer; }
+#graph {
+    transition:transform 200ms ease;
+    transform:translateX(100%);
+    width:33%;
+    height:100%;
+    background:#fafaea;
+    position:fixed;
+    top:0;
+    right:0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="header">
+</div>
+
+<div id="drawing">
+
+</div>
+
+
+<script src="libs/d3.min.js"></script>
+<script src="libs/lodash.js"></script>
+<script src="libs/chroma.min.js"></script>
+
+<script src="js/parser.js"></script>
+<script src="js/class.js"></script>
+<script src="js/enum.js"></script>
+
+<script type="text/javascript">
+/* Creating Global Array for keep track of Nodes*/
+window.nodeList = []; 
+
+parser = new Parser();
+let data = parser.readJson('./data/simple.json')
+console.log(data);
+Object.keys(data).forEach(function(nodeData) {
+  windows.nodeList.push(new Node(nodeData));
+})
+
+</script>
+
+
+</body>
+</html>
+
