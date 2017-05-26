@@ -183,8 +183,17 @@ class Site extends D3Object {
                 return new SiteLink(link[0],link[1]); 
             });
         this.agent = agent;
+        this.states = siteData.site_states;
+        this.currentState = null;
     }
     
+    setId(id) {
+        this.id = id;
+    }
+    setCurrentState(state) {
+        this.state = state;
+    }
+
     listLinks() {
         return this.links;
     }
@@ -197,17 +206,24 @@ class Site extends D3Object {
 class Node extends D3Object {
     constructor (nodeData) {
         super(nodeData.site_node_name);
-        this.sites = nodeData.site_node_sites.map(function(siteData) {
-            return Site(siteData, this);
+        let node = this;
+        this.sites = nodeData.site_node_sites.map(function(siteData, i) {
+            let site = new Site(siteData, node);
+            site.setId(i); 
+            return site;
         });
     }
     
+    setId(id) {
+        this.id = id;
+    }
+
     listSites() {
         return this.sites;
     }
 
-    getSite() {
-        return this.listSites()[siteLabe];
+    getSite(siteId) {
+        return this.listSites()[siteId];
     }
 
     preferredSize() {
@@ -221,6 +237,66 @@ class Node extends D3Object {
     }   
 }
 
-class Links {
+class SiteLink {
+    constructor(nodeId, siteId) {
+        this.nodeId = nodeId;
+        this.siteId = siteId;
+    }
 
+    equals(otherLink) {
+        return otherLink.nodeId == this.nodeId && otherLink.siteId == this.siteId;
+    }
+}
+
+class SiteEdge {
+    constructor(targetNode, target) {
+
+    }
+}
+
+class DataStorage {
+    constructor(data, isSnapshot) {
+        if(!data) {return null;} /* check that there is data*/
+        this.nodeCount = data.length;
+        this.isSnapshot = isSnapshot;
+        var tempData = [];
+        Object.keys(data).forEach(function(nodeData, i) {
+            let node = new Node(data[nodeData]);
+            node.setId(i);
+            tempData.push(node);
+        });
+        this.data = tempData;
+        
+    }
+
+    getNode(id) {
+        return this.data[id];
+    }
+
+    listNodes() {
+        return this.data;
+    }
+
+    getSite(node, s) {
+        return this.getNode(node).getSite(s);
+    }
+
+    // layout of sites
+    siteDistance(site, point) {
+        let distances = site.listLinks().map(function(link) {
+            let nodeLocation = this.getNode(link.nodeId).absolute;
+            return nodeLocation.distance(point);
+        });
+        let result = distances.reduce(function(a,b){ 
+            return a + b; }, 0);
+        return result;
+    }
+}
+
+class ContactMap {
+    constructor(id, isSnapShot) {
+        this.id = "#"+id;
+        this.isSnapShot = isSnapshot;
+        
+    }
 }

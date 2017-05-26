@@ -2,28 +2,24 @@
 
 class Parser {
   constructor() {
-    this.text = "";
-    this.tokens = [];
     this.data = {};
   }
 
   /* load a json from a path */
-  readJson(path, callback) {
+  readJson(path) {
 
     var json = path || './data/simple.json';
 
-    function loadJSON(path, callback2) {
+    function loadJSON(path, callback) {
         var httpRequest = new XMLHttpRequest();
         httpRequest.onreadystatechange = function() {
             if (httpRequest.readyState === 4) {
                 if (httpRequest.status === 200) {
-                    var data = JSON.parse(httpRequest.responseText);
-                    if (callback2) {
-                      callback2(data);
-                    }
-                    if (callback) {
-                      callback();
-                    }
+                    let data = JSON.parse(httpRequest.responseText);  
+                    callback(data);                                
+                }
+                else {
+                  throw "couldn't read file";
                 }
             }
         };
@@ -32,15 +28,16 @@ class Parser {
     }
 
     /* parse json file*/
-    loadJSON(json, this.parseData.bind(this));
+    loadJSON(json, this.populateData.bind(this));
   }
 
-  /**
-   * parse a json file
-   */
-  parseData(data) {
-    /* first get string tokens from the syntaxData */
-    return data;    
-    
+  populateData(data) {
+    window.data = [];
+    window.data.push(new DataStorage(data, 0));
+    console.log(window.data);
+  }
+
+  removeData(count) {
+    window.data.pop();
   }
 }
