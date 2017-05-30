@@ -6,35 +6,39 @@ class Parser {
   }
 
   /* load a json from a path */
-  readJson(path) {
+  readJson(path, contactMap) {
+    var parser = this;
+    let json = path || './data/simple.json';
+    return new Promise(function(resolve, reject) {
+      var httpRequest = new XMLHttpRequest();
+      httpRequest.open('GET', json);
+      httpRequest.onload = function() {
+        if (httpRequest.status == 200) {
+        // Resolve the promise with the response text
+          let data = JSON.parse(httpRequest.responseText);
+          resolve(parser.populateData(data));
 
-    var json = path || './data/simple.json';
+        }
+        else {
+        // Otherwise reject with the status text
+        // which will hopefully be a meaningful error
+          reject(Error(httpRequest.statusText));
+        }
 
-    function loadJSON(path, callback) {
-        var httpRequest = new XMLHttpRequest();
-        httpRequest.onreadystatechange = function() {
-            if (httpRequest.readyState === 4) {
-                if (httpRequest.status === 200) {
-                    let data = JSON.parse(httpRequest.responseText);  
-                    callback(data);                                
-                }
-                else {
-                  throw "couldn't read file";
-                }
-            }
-        };
-        httpRequest.open('GET', path);
-        httpRequest.send(); 
-    }
-
-    /* parse json file*/
-    loadJSON(json, this.populateData.bind(this));
+      };
+      // Handle network errors
+      httpRequest.onerror = function() {
+        reject(Error("Network Error"));
+      };
+      httpRequest.send(); 
+    });
   }
 
   populateData(data) {
     window.data = [];
     window.data.push(new DataStorage(data, 0));
-    console.log(window.data);
+    this.data = window.data;
+    console.log("populating data: "  + window.data);
   }
 
   removeData() {

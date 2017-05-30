@@ -3,7 +3,7 @@
 /* Contains classes required for the SiteGraph visualization */
 
 class Dimension {
-    constructor (height, width) {
+    constructor (width, height) {
         this.width = width;
         this.height = height;
     }
@@ -14,16 +14,17 @@ class Dimension {
     }
 
     scale(s) {
-        this.x *= s;
-        this.y *= s;
+        this.width *= s;
+        this.height *= s;
     }
 
     update(dimension) {
+        console.log(dimension);
         this.height = dimension.height;
         this.width = dimension.width;
     }
 
-    toPoint(x,y) {
+    toPoint() {
         return new Point(this.width, this.height);
     }
 
@@ -89,9 +90,10 @@ class Point {
         }
     }
 
-    scale(scalar) {
-        this.x *= scalar; 
-        this.y *= scalar;
+    scale(s) {
+        this.x *= s; 
+        this.y *= s;
+        return this;
     }
 
     middle(point) {
@@ -160,10 +162,12 @@ class D3Object {
     }
     
     anchor(point) {
-        this.dimension = this.dimension
+        //console.log(this.dimension);
+        console.log(this.dimension.toPoint().scale(-0.5));
+        return this.dimension
             .toPoint()
             .scale(-0.5)
-            .translate(point);
+            .translate(point, translate.ADD);
     }
 
     setDimension(dimension) {
