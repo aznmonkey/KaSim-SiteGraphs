@@ -35,10 +35,9 @@ class Parser {
   }
 
   populateData(data) {
-    window.data = [];
-    window.data.push(new DataStorage(data, 0));
-    this.data = window.data;
-    console.log("populating data: "  + window.data);
+    let dataStorage = new DataStorage(data, 0);
+    console.log(dataStorage);
+    return dataStorage;
   }
 
   removeData() {

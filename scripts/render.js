@@ -13,7 +13,7 @@ class Layout {
     circleNodes(){
         let w = this.dimension.width;
         let h = this.dimension.height;
-        let nodes = window.data[0].listNodes();
+        let nodes = contactMap.data.listNodes();
     
         console.log(this.dimension);
         nodes.forEach(function(node,index,nodes){
@@ -54,18 +54,27 @@ class ContactMap {
         this.isSnapShot = isSnapShot; 
     }
     setData(json) {
+        
         let map = this;
         let parser = new Parser();
         /* populates the data */
-        parser.readJson(json).then( function(reponse) {
+        parser.readJson(json).then( function(response) {
+            console.log(response);
+            map.data = response;
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
             let w = window.innerWidth - margin.left - margin.right;
             let h = window.innerHeight - margin.top - margin.bottom;
-            let layout = new Layout(map, new Dimension(w, h), margin);
-            let renderer = new Render(map.id, layout);
-            map.clearData();
-            renderer.render();
+            if (response) {
+                let layout = new Layout(map, new Dimension(w, h), margin);
+                let renderer = new Render(map.id, layout);
+                map.clearData();
+                renderer.render();
+            }
+            else {
+                Error('no data');
+            }
+            
         });
         
     }
@@ -107,7 +116,7 @@ class Render {
         this.zoom.call(d3.zoom().on("zoom",
 	  		        function () { transform = d3.event.transform;
 					      svg.attr("transform", d3.event.transform); }));
-        this.agentNames = window.data[0]
+        this.agentNames = layout.contactMap.data
                               .listNodes()
                               .map(function(node){
                                 return node.label;
@@ -122,36 +131,49 @@ class Render {
     }
 
     renderNodes() {
-
-        this.layout.circleNodes();
-        //console.log(window.data[0])
-        let dragmove = function () {};
-
-        var drag = d3.drag()
-                     .on("drag", dragmove);
+        let dragbarw = 10;
+        let renderer = this;
+        renderer.layout.circleNodes();
 
         let tooltip = this.tooltip = this.root
                            .append("div")
                            .attr("class", "contact-tooltip")
                            .style("visibility", "hidden");
+        
+
+        
+        
+
         let nodeGroup = this.svg
             .selectAll(".svg-group")
-            .data(window.data[0].listNodes())
+            .data(renderer.layout.contactMap.data.listNodes())
             .enter()
             .append("g")
             .attr("class","node-group")
             .attr("transform",function(d) {
                 return "translate("+d.absolute.x+","+d.absolute.y+")";
-            })
-            .call(drag);
-
+            });
+          
+        
+        
+        /* render node labels */
         let textGroup = nodeGroup
             .append("text")
             .attr("class","node-text")
             .style("text-anchor", "middle")
             .style("alignment-baseline", "middle")
-            .text(function(d){ return d.label; });
-
+            .text(function(d){
+                let label = d.label;
+                // truncate labels if they're too long
+                if (label.length > 10) {
+                    label = label.substring(0,10);
+                }
+                return label; });
+        
+        let handle = new DragHandle(dragbarw, nodeGroup);
+        
+        nodeGroup.call(handle.drag);
+        
         let rectGroup = nodeGroup
             .append("rect")
             .attr("rx", 5)
@@ -160,18 +182,20 @@ class Render {
             .attr("fill", '#ADD8E6')
             .attr("fill-opacity", 0.4)
             .on("mousemove", function(){
-                var event = d3.event;
-                var style_top = (event.clientY-10)+"px"; // pageY , clientY , layerY , screenY
-                var style_left = (event.clientX+10)+"px";
+                let event = d3.event;
+                let style_top = (event.clientY-10)+"px"; // pageY , clientY , layerY , screenY
+                let style_left = (event.clientX+10)+"px";
                 return tooltip
                        .style("top",style_top)
                        .style("left",style_left);
             });
 
-        /* render nodes */
+        
 
+        
+        /* render node rectangles */
         rectGroup
-                   .attr("x", function(d){ console.log(d); return d.anchor(d.relative).x; })
+                   .attr("x", function(d){ return d.anchor(d.relative).x; })
                    .attr("y", function(d){ return d.anchor(d.relative).y; })
                    .attr("width", function(d){ return d.getDimension().width; })
                    .attr("height", function(d){ return d.getDimension().height; });
@@ -185,4 +209,109 @@ class Render {
                                 return d; });
         
     }
+}
+
+class DragHandle {
+    constructor(width, rectGroup) {
+        let dragbarw = width;
+        this.dragright = d3.drag()
+                          .on("drag", this.rDragResize);
+
+        this.dragleft = d3.drag()
+                         .on("drag", this.lDragResize);
+
+        this.dragtop = d3.drag()
+                        .on("drag", this.tDragResize);
+
+        this.dragbottom = d3.drag()
+                           .on("drag", this.bDragResize);        
+
+        this.drag = d3.drag()
+                     .on("drag", this.dragMove);
+
+        this.dragbarleft = rectGroup.append("rect")
+            .attr("x", function(d) { return d.anchor(d.relative).x - (dragbarw/2); })
+            .attr("y", function(d) { return d.anchor(d.relative).y + (dragbarw/2); })
+            .attr("height", function(d) { return d.getDimension().height - dragbarw; })
+            .attr("id", "dragleft")
+            .attr("width", dragbarw)
+            .attr("fill", "blue")
+            .attr("fill-opacity", 1)
+            .attr("cursor", "ew-resize")
+            .call(this.dragleft);
+
+        this.dragbarright = rectGroup.append("rect")
+            .attr("x", function(d) { return d.anchor(d.relative).x + d.getDimension().width - (dragbarw/2); })
+            .attr("y", function(d) { return d.anchor(d.relative).y + (dragbarw/2); })
+            .attr("height", function(d) { return d.getDimension().height - dragbarw; })
+            .attr("id", "dragright")
+            .attr("width", dragbarw)
+            .attr("fill", "blue")
+            .attr("fill-opacity", 1)
+            .attr("cursor", "ew-resize")
+            .call(this.dragright);
+
+        this.dragbartop = rectGroup.append("rect")
+            .attr("x", function(d) { return d.anchor(d.relative).x + (dragbarw/2); })
+            .attr("y", function(d) { return d.anchor(d.relative).y - (dragbarw/2); })
+            .attr("height", dragbarw)
+            .attr("id", "dragtop")
+            .attr("width", function(d) { return d.getDimension().width - dragbarw;})
+            .attr("fill", "blue")
+            .attr("fill-opacity", 1)
+            .attr("cursor", "ew-resize")
+            .call(this.dragtop);
+
+        this.dragbarbottom = rectGroup.append("rect")
+            .attr("x", function(d) { return d.anchor(d.relative).x + (dragbarw/2); })
+            .attr("y", function(d) { return d.anchor(d.relative).y + d.getDimension().height - (dragbarw/2); })
+            .attr("height", dragbarw)
+            .attr("id", "dragbottom")
+            .attr("width", function(d) { return d.getDimension().width - dragbarw; })
+            .attr("fill", "blue")
+            .attr("fill-opacity", 1)
+            .attr("cursor", "ew-resize")
+            .call(this.dragbottom);
+
+    }
+        /* add drag bars to nodes */
+    dragMove(d) {
+        d.absolute.update(d3.event);
+        d3.select(this).attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+
+        d3.select('#dragtop').attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+        d3.select('#dragbottom').attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+        d3.select('#dragleft').attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+        d3.select('#dragright').attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+    }
+
+    rDragResize(d) {
+        d.absolute.update(d3.event);
+        d3.select(this).attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+    }
+
+    lDragResize(d) {
+        d.absolute.update(d3.event);
+        d3.select(this).attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+    }
+
+    tDragreSize(d) {
+        d.absolute.update(d3.event);
+        d3.select(this).attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
+    }
+
+    bDragResize(d) {
+        d.absolute.update(d3.event);
+        d3.select(this).attr("transform",
+                                "translate(" + d.absolute.x + "," + d.absolute.y + ")")
+    }
+   
 }

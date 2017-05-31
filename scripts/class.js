@@ -93,7 +93,6 @@ class Point {
     scale(s) {
         this.x *= s; 
         this.y *= s;
-        return this;
     }
 
     middle(point) {
@@ -163,11 +162,10 @@ class D3Object {
     
     anchor(point) {
         //console.log(this.dimension);
-        console.log(this.dimension.toPoint().scale(-0.5));
-        return this.dimension
-            .toPoint()
-            .scale(-0.5)
-            .translate(point, translate.ADD);
+        let newPoint = this.dimension.toPoint();
+        newPoint.scale(-0.5);
+        newPoint.translate(point, translate.ADD);
+        return newPoint;
     }
 
     setDimension(dimension) {
