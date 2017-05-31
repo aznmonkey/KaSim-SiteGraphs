@@ -1,6 +1,7 @@
 /*jshint esversion: 6*/
 
 class Layout {
+
     constructor(contactMap, dimension, margin) {
         this.contactMap = contactMap;
         this.dimension = dimension;
@@ -9,7 +10,7 @@ class Layout {
             bottom: 10, left: 10 };
         
     }
-    
+    /*    
     circleNodes(){
         let w = this.dimension.width;
         let h = this.dimension.height;
@@ -30,7 +31,7 @@ class Layout {
             nodes[index].absolute = new Point(dx + w/2,
                                               dy + h/2);
 
-            /* set static node dimensions for now */
+            //set static node dimensions for now
             nodes[index].dimension = new Dimension(50,50);
     
       });
@@ -46,8 +47,10 @@ class Layout {
     setSiteDimension(site,dimensions){
         site.contentDimension = dimensions.clone();
     }
-
+*/
 }
+
+
 class ContactMap {
     constructor(id, isSnapShot) {
         this.id = "#"+id;
@@ -107,7 +110,7 @@ class Render {
                             this.layout.margin.top +
                             this.layout.margin.bottom);
         
-        this.zoom = this.svg.append("g");
+        this.zoom = this.svg.append("g").attr("transform", "translate(" + width/2 +"," + height/2 + ")");
         this.svg = this.zoom.append("g");
 
         let svg = this.svg;
@@ -127,9 +130,112 @@ class Render {
 
     render() {
         console.log("rendering");
-        this.renderNodes();
+        this.renderDonut();
     }
 
+    renderDonut() {
+        let layout = this.layout;
+        let width = layout.dimension.width;
+        let height = layout.dimension.height;
+    
+        let renderer = this;
+
+        let c20 = d3.scaleOrdinal(d3.schemeCategory20);
+
+        let radius = Math.min(width, height)/2; 
+        let nodew = radius/6;
+        let sitew = radius/8;
+        let nodeArc = d3.arc()
+                    .outerRadius(radius - 10)
+                    .innerRadius(radius - nodew);
+        
+        let siteArc = d3.arc()
+                    .outerRadius(radius - nodew)
+                    .innerRadius(radius - nodew - sitew);
+
+        let node = d3.pie() 
+                      .sort(null)
+                      .value(function(d) {
+                          console.log(d.listSites().length);
+                          return d.listSites().length;
+                      });
+        
+        let site = d3.pie() 
+                      .sort(null)
+                      .value(function(d) {
+                          return 1;
+                      });
+
+        let donut = d3.pie() 
+                      .sort(null)
+                      .value(function(d) {
+                          console.log(d.listSites().length);
+                          return d.listSites().length;
+                      });
+
+        
+        let siteList = [];
+        let data = renderer.layout.contactMap.data;
+        console.log(data);
+        for (let key in data.listNodes()) { 
+            let sites = data.listNodes()[key].listSites();
+            for (let key in sites) {
+                siteList.push(sites[key]);
+            }
+        }
+
+        console.log(siteList);
+        let svg = this.svg;
+        let gNode = svg.selectAll(".nodeArc")
+                   .data(node(data.listNodes()))
+                   .enter().append("g");
+        let gSite = svg.selectAll(".siteArc") 
+                    .data(site(siteList))
+                    .enter().append("g");
+
+        gNode.append("path")
+            .attr("d", nodeArc)
+            .attr("id", function(d,i) { return "nodeArc_" + i;})
+            .style("fill", function(d,i) { return c20(i);});
+
+        
+        gNode.append("text")
+            .attr("transform", function(d) { //set the label's origin to the center of the arc
+                return "translate(" + nodeArc.centroid(d) + ")";
+            })
+			.style('font-size', '20px')
+            .attr('text-anchor', 'middle')
+			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
+            .style("fill", "black")
+             //place the text halfway on the arc
+            .text(function(d) { 
+                let label = d.data.label;
+                label = label.length > 10 ? label.substring(0,8): label;
+                return label; });
+
+        gSite.append("path")
+            .attr("d", siteArc)
+            .attr("id", function(d,i) { return "siteArc_" + i;})
+            .style("fill", function(d,i) { return c20(i);});
+
+        
+        gSite.append("text")
+            .attr("transform", function(d) { //set the label's origin to the center of the arc
+                return "translate(" + siteArc.centroid(d) + ")";
+            })
+			.style('font-size', '20px')
+            .attr('text-anchor', 'middle')
+			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
+            .style("fill", "black")
+             //place the text halfway on the arc
+            .text(function(d) { 
+                let label = d.data.label;
+                console.log(d);
+                label = label.length > 10 ? label.substring(0,8): label;
+                return label; });
+
+    }
+/*  
     renderNodes() {
         let dragbarw = 10;
         let renderer = this;
@@ -156,7 +262,7 @@ class Render {
           
         
         
-        /* render node labels */
+        // render node labels 
         let textGroup = nodeGroup
             .append("text")
             .attr("class","node-text")
@@ -193,7 +299,7 @@ class Render {
         
 
         
-        /* render node rectangles */
+        // render node rectangles 
         rectGroup
                    .attr("x", function(d){ return d.anchor(d.relative).x; })
                    .attr("y", function(d){ return d.anchor(d.relative).y; })
@@ -201,7 +307,7 @@ class Render {
                    .attr("height", function(d){ return d.getDimension().height; });
   
         let layout = this.layout;
-        /* datum is map for data */
+        datum is map for data
         textGroup
             .datum(function(d){ console.log( d );
                                 layout
@@ -210,7 +316,7 @@ class Render {
         
     }
 }
-
+/*
 class DragHandle {
     constructor(width, rectGroup) {
         let dragbarw = width;
@@ -274,7 +380,7 @@ class DragHandle {
             .call(this.dragbottom);
 
     }
-        /* add drag bars to nodes */
+        add drag bars to nodes å
     dragMove(d) {
         d.absolute.update(d3.event);
         d3.select(this).attr("transform",
@@ -313,5 +419,5 @@ class DragHandle {
         d3.select(this).attr("transform",
                                 "translate(" + d.absolute.x + "," + d.absolute.y + ")")
     }
-   
+ */  
 }
