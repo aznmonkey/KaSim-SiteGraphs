@@ -26,7 +26,7 @@ class Layout {
                 let angle = 2*index*Math.PI/length;
                 dx = w * Math.cos(angle)/4;
                 dy = h * Math.sin(angle)/3;
-                console.log("x:" + dx + " y:" + dy);
+                console.log('x:' + dx + ' y:' + dy);
             }
             nodes[index].absolute = new Point(dx + w/2,
                                               dy + h/2);
@@ -53,7 +53,7 @@ class Layout {
 
 class ContactMap {
     constructor(id, isSnapShot) {
-        this.id = "#"+id;
+        this.id = '#'+id;
         this.isSnapShot = isSnapShot; 
     }
     setData(json) {
@@ -84,8 +84,8 @@ class ContactMap {
     }
 
     clearData() {
-        d3.select(this.id).selectAll("svg").remove();
-        d3.selectAll(".contact-tooltip").remove();
+        d3.select(this.id).selectAll('svg').remove();
+        d3.selectAll('.contact-tooltip').remove();
     }
 
 }
@@ -101,26 +101,26 @@ class Render {
         /* create svg to draw contact maps on */
 
         this.svg = this.root
-            .append("svg")
-            .attr("class", "svg-group")
-            .attr("id", "map-container")
-            .attr("width", width +
+            .append('svg')
+            .attr('class', 'svg-group')
+            .attr('id', 'map-container')
+            .attr('width', width +
                             this.layout.margin.left +
                             this.layout.margin.right)
-            .attr("height", height +
+            .attr('height', height +
                             this.layout.margin.top +
                             this.layout.margin.bottom);
         
-        this.zoom = this.svg.append("g").attr("transform", "translate(" + width/2 + "," + height/2 + ")");
-        this.svg = this.zoom.append("g");
+        this.zoom = this.svg.append('g').attr('transform', 'translate(' + width/2 + ',' + height/2 + ')');
+        this.svg = this.zoom.append('g');
 
         let svg = this.svg;
 
-        this.zoom.call(d3.zoom().on("zoom", function () { 
-            svg.attr("transform", d3.event.transform); 
+        this.zoom.call(d3.zoom().on('zoom', function () { 
+            svg.attr('transform', d3.event.transform); 
         }));
-        this.zoom.call(d3.drag().on("drag", function() {
-            svg.attr("transform", "translate(" + d3.event.x + "," + d3.event.y +")");
+        this.zoom.call(d3.drag().on('drag', function() {
+            svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')');
         }));
         this.agentNames = layout.contactMap.data
                               .listNodes()
@@ -147,7 +147,7 @@ class Render {
     }
 
     render() {
-        console.log("rendering");
+        console.log('rendering');
         this.renderDonut();
         this.renderLinks();
     }
@@ -209,178 +209,161 @@ class Render {
         console.log(data.packageLinks(hierarchy.leaves()));
         let links = svg.selectAll('.links')
             .data(data.packageLinks(hierarchy.leaves()))
-            .enter().append("path")
+            .enter().append('path')
             .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
-            .attr("class", "link")
-            .attr("d", line)
-            .attr("stroke", "steelblue")
-            .attr("stroke-opacity", 0.4);;
+            .attr('class', 'link')
+            .attr('d', line)
+            .attr('stroke', 'steelblue')
+            .attr('stroke-opacity', 0.4);;
 
         /*let links = svg.selectAll('.links')
                     .data(this.siteLinks)
-                    .enter().append("path")
-                    .attr("class", "links")
-                    .attr("d", function(d) {return line([d.target, d.source]); 
+                    .enter().append('path')
+                    .attr('class', 'links')
+                    .attr('d', function(d) {return line([d.target, d.source]); 
                         })
-                    .attr("stroke", "steelblue")
-                    .attr("stroke-opacity", 0.4);
+                    .attr('stroke', 'steelblue')
+                    .attr('stroke-opacity', 0.4);
         */
     }
 
     renderDonut() {
-        let siteList = this.siteList;
-        let layout = this.layout;
-        let width = layout.dimension.width;
-        let height = layout.dimension.height;
-        let renderer = this;
+        let width = this.layout.dimension.width;
+        let height = this.layout.dimension.height;
+        let margin = 150;
 
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
 
         
-        let radius = Math.min(width, height)/2;
-        let paddingw = radius/100; 
-        let nodew = radius/6;
-        let statew = radius/12;
-        let sitew = radius/8;
-        let innerRadius = radius - nodew - statew - sitew;
+        let radius = Math.min(width, height)/2 - margin;
+
+        let arcHeight = radius / 3;
 
         let cluster = d3.cluster()
-            .size([360, innerRadius]);
-            
-        let nodeArc = d3.arc()
-                    .outerRadius(radius - 10 )
-                    .innerRadius(radius - nodew + paddingw);
-        
-        let siteArc = d3.arc()
-                    .outerRadius(radius - nodew - statew )
-                    .innerRadius(innerRadius);
-
-        let node = d3.pie() 
+            .size([360, radius - arcHeight]);
+                    
+        let pie = d3.pie() 
                     .sort(null)
-                    .value(function(d) {
-                        return d.listSites().length;
-                    })
+                    .value((d) => d.listSites().length)
                     .padAngle(0.01);
 
-        let site = d3.pie() 
-                    .sort(null)
-                    .value(function(d) {
-                        return 1;
-                    })
-                    .padAngle(0.01);
+        let nodes = this.layout.contactMap.data.listNodes();
+
+        let arc = this.svg.selectAll('.nodeArc')
+            .data(pie(nodes))
+        .enter().append('g')
+            .attr('class','nodeArc');
+
+        let arcPath = d3.arc()
+            .outerRadius(radius )
+            .innerRadius(radius - arcHeight);
+
+        arc.append('path')
+            .attr('d', arcPath)
+            .attr('id', (d,i) => 'arc_' + i)
+            .style('fill', (d,i) => c20(i));
+
+        arc.append('text')
+            .attr('transform', function(d) { //set the label's origin to the center of the arc
+                return 'translate(' + arcPath.centroid(d) + ')';
+            })
+            .style('font-size', '20px')
+            .attr('text-anchor', 'middle')
+            .style('fill', 'black')
+            .text((d) => { 
+                let label = d.data.label;
+                label = label.length > 10 ? label.substring(0,8): label;
+                return label;
+            });        
 
         
-        let data = this.layout.contactMap.data;
 
-        let svg = this.svg;
-        let gNode = svg.selectAll(".nodeArc")
-                    .data(node(data.listNodes()))
-                    .enter().append("g");
-        
-
-        let gSite = svg.selectAll(".siteArc") 
-                    .data(site(siteList))
-                    .enter().append("g");
+        // let gSite = svg.selectAll('.siteArc') 
+        //             .data(site(siteList))
+        //             .enter().append('g');
         
         /* draw node arcs paths */
-        gNode.append("path")
-            .attr("d", nodeArc)
-            .attr("id", function(d,i) { return "nodeArc_" + i;})
-            .style("fill", function(d,i) { return c20(i);});
+        
+   //      gSite.append('path')
+   //          .attr('d', siteArc)
+   //          .attr('id', function(d,i) { return 'siteArc_' + i;})
+   //          .style('fill', function(d,i) { return c20(i);});
 
         
-        gNode.append("text")
-            .attr("transform", function(d) { //set the label's origin to the center of the arc
-                return "translate(" + nodeArc.centroid(d) + ")";
-            })
-			.style('font-size', '20px')
-            .attr('text-anchor', 'middle')
-            .style("fill", "black")
-            .text(function(d) { 
-                let label = d.data.label;
-                label = label.length > 10 ? label.substring(0,8): label;
-                return label; });        
-        
-        gSite.append("path")
-            .attr("d", siteArc)
-            .attr("id", function(d,i) { return "siteArc_" + i;})
-            .style("fill", function(d,i) { return c20(i);});
+   //      gSite.append('text')
+   //          .attr('transform', function(d) { //set the label's origin to the center of the arc
+   //              return 'translate(' + siteArc.centroid(d) + ')';
+   //          })
+			// .style('font-size', '20px')
+   //          .attr('text-anchor', 'middle')
+			// //.attr('xlink:href',function(d,i){return '#nodeArc_'+i;})
+   //          .style('fill', 'black')
+   //           //place the text halfway on the arc
+   //          .text(function(d) { 
+   //              let label = d.data.label;
+   //              d.data.startAngle = d.startAngle;
+   //              d.data.endAngle = d.endAngle;
+   //              label = label.length > 10 ? label.substring(0,8): label;
+   //              return label; });
 
-        
-        gSite.append("text")
-            .attr("transform", function(d) { //set the label's origin to the center of the arc
-                return "translate(" + siteArc.centroid(d) + ")";
-            })
-			.style('font-size', '20px')
-            .attr('text-anchor', 'middle')
-			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
-            .style("fill", "black")
-             //place the text halfway on the arc
-            .text(function(d) { 
-                let label = d.data.label;
-                d.data.startAngle = d.startAngle;
-                d.data.endAngle = d.endAngle;
-                label = label.length > 10 ? label.substring(0,8): label;
-                return label; });
+   //      //console.log(data);
+   //      //console.log(siteList);
 
-        //console.log(data);
-        //console.log(siteList);
+   //      /* draws red dot at center of arc, for debugging purposes */
+   //      gSite
+   //          .data(siteList)
+   //          .append('circle')
+   //          .attr('cx', function(d) {
+   //              return d.cartX(innerRadius);
+   //          })
+   //          .attr('cy', function(d) {
+   //              return d.cartY(innerRadius);
+   //          })
+   //          .attr('r', '5px')
+   //          .attr('fill', 'red');
 
-        /* draws red dot at center of arc, for debugging purposes */
-        gSite
-            .data(siteList)
-            .append("circle")
-            .attr('cx', function(d) {
-                return d.cartX(innerRadius);
-            })
-            .attr('cy', function(d) {
-                return d.cartY(innerRadius);
-            })
-            .attr('r', '5px')
-            .attr("fill", "red");
+   //       for (let sites in this.siteList) {
+   //          let site = this.siteList[sites];
+   //          console.log(site.getStates());
 
-         for (let sites in this.siteList) {
-            let site = this.siteList[sites];
-            console.log(site.getStates());
+   //          let state = d3.pie()
+   //                  .sort(null)
+   //                  .value(function(d) {
+   //                      return 1;
+   //                  })
+   //                  .startAngle(site.startAngle)
+   //                  .endAngle(site.endAngle)
+   //                  .padAngle(0.01);
 
-            let state = d3.pie()
-                    .sort(null)
-                    .value(function(d) {
-                        return 1;
-                    })
-                    .startAngle(site.startAngle)
-                    .endAngle(site.endAngle)
-                    .padAngle(0.01);
+   //          let stateArc = d3.arc()
+   //              .outerRadius(radius - nodew)
+   //              .innerRadius(radius - nodew - statew + paddingw);
+   //          /* draw state arc paths */
+   //          let gState = svg.selectAll('.stateArc')
+   //                  .data(state(site.getStates()))
+   //                  .enter().append('g');
 
-            let stateArc = d3.arc()
-                .outerRadius(radius - nodew)
-                .innerRadius(radius - nodew - statew + paddingw);
-            /* draw state arc paths */
-            let gState = svg.selectAll(".stateArc")
-                    .data(state(site.getStates()))
-                    .enter().append("g");
+   //          gState.append('path')
+   //          .attr('d', stateArc)
+   //          .attr('id', function(d,i) { return 'stateArc_' + site.label + '_' + i;})
+   //          .style('fill', function(d,i) { return c20(i);});
 
-            gState.append("path")
-            .attr("d", stateArc)
-            .attr("id", function(d,i) { return "stateArc_" + site.label + "_" + i;})
-            .style("fill", function(d,i) { return c20(i);});
-
-            gState.append("text")
-            .attr("transform", function(d) { //set the label's origin to the center of the arc
-                return "translate(" + stateArc.centroid(d) + ")";
-            })
-			.style('font-size', '20px')
-            .attr('text-anchor', 'middle')
-			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
-            .style("fill", "black")
-             //place the text halfway on the arc
-            .text(function(d) { 
-                let label = d.data.name;
-                label = label.length > 10 ? label.substring(0,8): label;
-                return label; });
+   //          gState.append('text')
+   //          .attr('transform', function(d) { //set the label's origin to the center of the arc
+   //              return 'translate(' + stateArc.centroid(d) + ')';
+   //          })
+			// .style('font-size', '20px')
+   //          .attr('text-anchor', 'middle')
+			// //.attr('xlink:href',function(d,i){return '#nodeArc_'+i;})
+   //          .style('fill', 'black')
+   //           //place the text halfway on the arc
+   //          .text(function(d) { 
+   //              let label = d.data.name;
+   //              label = label.length > 10 ? label.substring(0,8): label;
+   //              return label; });
 
 
-        }
+   //      }
 
     }
 }
