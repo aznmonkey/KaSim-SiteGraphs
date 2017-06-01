@@ -140,13 +140,18 @@ class Render {
             for (let key in sites) {
                 this.siteList.push(sites[key]);
             }
-        }
-
-        
-        
+        }        
     }
 
     render() {
+        // recalculate radius / dimensions
+        let width = this.layout.dimension.width;
+        let height = this.layout.dimension.height;
+        let margin = 150;
+        this.radius = Math.min(width, height)/2 - margin;
+        this.arcHeight = this.radius / 3;
+
+        // render chart
         console.log('rendering');
         this.renderDonut();
         this.renderLinks();
@@ -175,21 +180,20 @@ class Render {
 
     renderLinks() {
         let data = this.layout.contactMap.data;
-        let layout = this.layout;
-        let width = layout.dimension.width;
-        let height = layout.dimension.height;
-    
-        let radius = Math.min(width, height)/2; 
-        let nodew = radius/6;
-        let statew = radius/12;
-        let sitew = radius/8;
-        let innerRadius = radius - nodew - statew - sitew;
+
+        // let radius = Math.min(width, height)/2; 
+        // let nodew = radius/6;
+        // let statew = radius/12;
+        // let sitew = radius/8;
+        // let innerRadius = radius - nodew - statew - sitew;
 
         let svg = this.svg;
         let hierarchy = this.hierarchy;
+
         let cluster =  d3.cluster()
             .separation(function(a, b) { return 1; })
-            .size([360, innerRadius]);
+            .size([360, this.innerRadius]);
+
         let line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
             .radius(function(d) { return d.y; })
@@ -206,7 +210,7 @@ class Render {
 
         cluster(hierarchy);
 
-        console.log(data.packageLinks(hierarchy.leaves()));
+        console.log('leaves',data.packageLinks(hierarchy.leaves()));
         let links = svg.selectAll('.links')
             .data(data.packageLinks(hierarchy.leaves()))
             .enter().append('path')
@@ -228,19 +232,7 @@ class Render {
     }
 
     renderDonut() {
-        let width = this.layout.dimension.width;
-        let height = this.layout.dimension.height;
-        let margin = 150;
-
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
-
-        
-        let radius = Math.min(width, height)/2 - margin;
-
-        let arcHeight = radius / 3;
-
-        let cluster = d3.cluster()
-            .size([360, radius - arcHeight]);
                     
         let pie = d3.pie() 
                     .sort(null)
@@ -249,14 +241,14 @@ class Render {
 
         let nodes = this.layout.contactMap.data.listNodes();
 
-        let arc = this.svg.selectAll('.nodeArc')
+        let arc = this.svg.selectAll('.arc')
             .data(pie(nodes))
         .enter().append('g')
-            .attr('class','nodeArc');
+            .attr('class','arc');
 
         let arcPath = d3.arc()
-            .outerRadius(radius )
-            .innerRadius(radius - arcHeight);
+            .outerRadius(this.radius)
+            .innerRadius(this.innerRadius);
 
         arc.append('path')
             .attr('d', arcPath)
@@ -270,13 +262,53 @@ class Render {
             .style('font-size', '20px')
             .attr('text-anchor', 'middle')
             .style('fill', 'black')
-            .text((d) => { 
+            .text((d) => {
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label;
             });        
 
-        
+        this.svg.selectAll('.arc').each((d, i, el) => {
+            d.data.arc = d;
+            d.data.svg = el[i];
+        })
+
+
+        this.siteList.forEach(site => console.log([site.agent.arc.startAngle, site.agent.arc.endAngle], site.agent.sites.indexOf(site), site.agent.sites.length));
+
+        function getRotation(site) {
+            let numSites = site.agent.sites.length;
+            let index = site.agent.sites.indexOf(site);
+
+            // interpolate between startangle and endangle
+            let angle = site.agent.arc.startAngle + (site.agent.arc.endAngle - site.agent.arc.startAngle) * (index + 2) / (numSites + 3);
+            return angle * 180 / Math.PI - 90;
+        }
+
+        let site = this.svg.selectAll('.site')
+            .data(this.siteList)
+        .enter().append('g')
+            .attr('class','site')
+            .attr('transform', d => 'rotate(' + getRotation(d) + ')');
+
+        site.append('line')
+            .attr('opacity', 0.5)
+            .attr('stroke','black')
+            .attr('x1', this.innerRadius)
+            .attr('x2', this.radius);
+
+        site.append('circle')
+            .attr('cx', this.innerRadius)
+            .attr('r', 1);
+
+        // site.append('circle')
+        //     .attr('transform', d => [d.cartX(this.innerRadius), d.cartY(this.innerRadius)]);
+            // .attr('x', (d, i) => { console.log(d,i); return })
+
+        // console.log('nodes', nodes);
+
+        // console.log('sitelist',this.siteList);
+        // this.siteList.forEach(x => console.log([x.label, x.agent.label]));
 
         // let gSite = svg.selectAll('.siteArc') 
         //             .data(site(siteList))
@@ -365,5 +397,9 @@ class Render {
 
    //      }
 
+    }
+
+    get innerRadius() {
+        return this.radius - this.arcHeight;
     }
 }
