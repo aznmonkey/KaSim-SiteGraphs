@@ -223,11 +223,7 @@ class Render {
                     .outerRadius(radius - 10)
                     .innerRadius(radius - nodew);
         
-        let stateArc = d3.arc()
-                    .outerRadius(radius - nodew)
-                    .innerRadius(radius - nodew - statew);
-
-;       let siteArc = d3.arc()
+        let siteArc = d3.arc()
                     .outerRadius(radius - nodew - statew)
                     .innerRadius(innerRadius);
 
@@ -235,12 +231,6 @@ class Render {
                     .sort(null)
                     .value(function(d) {
                         return d.listSites().length;
-                    });
-        
-        let state = d3.pie()
-                    .sort(null)
-                    .value(function(d) {
-                        return 1;
                     });
 
         let site = d3.pie() 
@@ -256,11 +246,13 @@ class Render {
         let gNode = svg.selectAll(".nodeArc")
                     .data(node(data.listNodes()))
                     .enter().append("g");
+        
+
         let gSite = svg.selectAll(".siteArc") 
                     .data(site(siteList))
                     .enter().append("g");
         
-
+        /* draw node arcs paths */
         gNode.append("path")
             .attr("d", nodeArc)
             .attr("id", function(d,i) { return "nodeArc_" + i;})
@@ -273,19 +265,15 @@ class Render {
             })
 			.style('font-size', '20px')
             .attr('text-anchor', 'middle')
-			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
             .style("fill", "black")
-             //place the text halfway on the arc
             .text(function(d) { 
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
 
-        gState.append("path")
-            .attr("d", stateArc)
-            .attr("id", function(d,i) { return "siteArc_" + i;})
-            .style("fill", function(d,i) { return c20(i);});
 
+        
+        
         gSite.append("path")
             .attr("d", siteArc)
             .attr("id", function(d,i) { return "siteArc_" + i;})
@@ -311,6 +299,7 @@ class Render {
         //console.log(data);
         //console.log(siteList);
 
+        console.log(siteList);
         gSite
             .data(siteList)
             .append("circle")
@@ -323,190 +312,47 @@ class Render {
             .attr('r', '5px')
             .attr("fill", "red");
 
-    }
-/*  
-    renderNodes() {
-        let dragbarw = 10;
-        let renderer = this;
-        renderer.layout.circleNodes();
+         for (let sites in this.siteList) {
+            let site = this.siteList[sites];
+            console.log(site.getStates());
 
-        let tooltip = this.tooltip = this.root
-                           .append("div")
-                           .attr("class", "contact-tooltip")
-                           .style("visibility", "hidden");
-        
+            let state = d3.pie()
+                    .sort(null)
+                    .value(function(d) {
+                        return 1;
+                    })
+                    .startAngle(site.startAngle)
+                    .endAngle(site.endAngle);
 
-        
-        
+            let stateArc = d3.arc()
+                .outerRadius(radius - nodew)
+                .innerRadius(radius - nodew - statew);
+            /* draw state arc paths */
+            let gState = svg.selectAll(".stateArc")
+                    .data(state(site.getStates()))
+                    .enter().append("g");
 
-        let nodeGroup = this.svg
-            .selectAll(".svg-group")
-            .data(renderer.layout.contactMap.data.listNodes())
-            .enter()
-            .append("g")
-            .attr("class","node-group")
-            .attr("transform",function(d) {
-                return "translate("+d.absolute.x+","+d.absolute.y+")";
-            });
-          
-        
-        
-        // render node labels 
-        let textGroup = nodeGroup
-            .append("text")
-            .attr("class","node-text")
-            .style("text-anchor", "middle")
-            .style("alignment-baseline", "middle")
-            .text(function(d){
-                let label = d.label;
-                // truncate labels if they're too long
-                if (label.length > 10) {
-                    label = label.substring(0,10);
-                }
+            gState.append("path")
+            .attr("d", stateArc)
+            .attr("id", function(d,i) { console.log(d,i); return "stateArc_" + site.label + "_" + i;})
+            .style("fill", function(d,i) { return c20(i);});
+
+            gState.append("text")
+            .attr("transform", function(d) { //set the label's origin to the center of the arc
+                return "translate(" + stateArc.centroid(d) + ")";
+            })
+			.style('font-size', '20px')
+            .attr('text-anchor', 'middle')
+			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
+            .style("fill", "black")
+             //place the text halfway on the arc
+            .text(function(d) { 
+                let label = d.data.name;
+                label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
-        
-        let handle = new DragHandle(dragbarw, nodeGroup);
-        
-        nodeGroup.call(handle.drag);
-        
-        let rectGroup = nodeGroup
-            .append("rect")
-            .attr("rx", 5)
-            .attr("ry", 5)
-            .attr("class","node-rect")
-            .attr("fill", '#ADD8E6')
-            .attr("fill-opacity", 0.4)
-            .on("mousemove", function(){
-                let event = d3.event;
-                let style_top = (event.clientY-10)+"px"; // pageY , clientY , layerY , screenY
-                let style_left = (event.clientX+10)+"px";
-                return tooltip
-                       .style("top",style_top)
-                       .style("left",style_left);
-            });
 
-        
 
-        
-        // render node rectangles 
-        rectGroup
-                   .attr("x", function(d){ return d.anchor(d.relative).x; })
-                   .attr("y", function(d){ return d.anchor(d.relative).y; })
-                   .attr("width", function(d){ return d.getDimension().width; })
-                   .attr("height", function(d){ return d.getDimension().height; });
-  
-        let layout = this.layout;
-        datum is map for data
-        textGroup
-            .datum(function(d){ console.log( d );
-                                layout
-                                .setNodeDimensions(d,this.getBBox());
-                                return d; });
-        
-    }
-}
-/*
-class DragHandle {
-    constructor(width, rectGroup) {
-        let dragbarw = width;
-        this.dragright = d3.drag()
-                          .on("drag", this.rDragResize);
-
-        this.dragleft = d3.drag()
-                         .on("drag", this.lDragResize);
-
-        this.dragtop = d3.drag()
-                        .on("drag", this.tDragResize);
-
-        this.dragbottom = d3.drag()
-                           .on("drag", this.bDragResize);        
-
-        this.drag = d3.drag()
-                     .on("drag", this.dragMove);
-
-        this.dragbarleft = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x - (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y + (dragbarw/2); })
-            .attr("height", function(d) { return d.getDimension().height - dragbarw; })
-            .attr("id", "dragleft")
-            .attr("width", dragbarw)
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragleft);
-
-        this.dragbarright = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x + d.getDimension().width - (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y + (dragbarw/2); })
-            .attr("height", function(d) { return d.getDimension().height - dragbarw; })
-            .attr("id", "dragright")
-            .attr("width", dragbarw)
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragright);
-
-        this.dragbartop = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x + (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y - (dragbarw/2); })
-            .attr("height", dragbarw)
-            .attr("id", "dragtop")
-            .attr("width", function(d) { return d.getDimension().width - dragbarw;})
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragtop);
-
-        this.dragbarbottom = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x + (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y + d.getDimension().height - (dragbarw/2); })
-            .attr("height", dragbarw)
-            .attr("id", "dragbottom")
-            .attr("width", function(d) { return d.getDimension().width - dragbarw; })
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragbottom);
+        }
 
     }
-        add drag bars to nodes å
-    dragMove(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-
-        d3.select('#dragtop').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-        d3.select('#dragbottom').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-        d3.select('#dragleft').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-        d3.select('#dragright').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    rDragResize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    lDragResize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    tDragreSize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    bDragResize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")")
-    }
- */  
 }

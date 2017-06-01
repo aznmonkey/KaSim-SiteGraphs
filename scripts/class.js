@@ -59,7 +59,9 @@ class Site extends D3Object {
                 return new SiteLink(link[0],link[1]); 
             });
         this.agent = agent;
-        this.states = siteData.site_states;
+        this.states = siteData.site_states.map(function(state) {
+                return new State(state);
+            });
         this.currentState = null;
         this.startAngle = 0;
         this.endAngle = 0;
@@ -88,7 +90,7 @@ class Site extends D3Object {
     getStates() {
         return this.states;
     }
-    
+
     getAngle() {
         return (this.startAngle + this.endAngle)/2;
     }
@@ -123,6 +125,12 @@ class Node extends D3Object {
 
     getSite(siteId) {
         return this.listSites()[siteId];
+    }
+}
+
+class State {
+    constructor(name) {
+        this.name = name;
     }
 }
 
