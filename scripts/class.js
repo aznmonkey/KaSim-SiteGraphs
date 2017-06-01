@@ -24,138 +24,12 @@ class Dimension {
         this.width = dimension.width;
     }
 
-    toPoint() {
-        return new Point(this.width, this.height);
-    }
-
-    larger(dimension) {
-        let result =
-        (this.height > dimension.height) &&
-            (this.width > dimension.width);
-        return result;
-    }
-
-    min(dimension) {
-        let minWidth = (this.width < dimension.width) ? this.width : dimension.width;
-        let minHeight = (this.height < dimension.height) ? this.height : dimension.height;
-        return new Dimension(minWidth, minHeight);
-    }
-
-    max(dimension) {
-        let maxWidth = (this.width > dimension.width) ? this.width : dimension.width;
-        let maxHeight = (this.height > dimension.height) ? this.height : dimension.height;
-        return new Dimension(minWidth, minHeight);
-    }
-
-    getSquare() {
-        let size = Math.max(this.width, this.height);
-        return new Dimension(size, size);
-    }
-
-    getArea() {
-        return this.width * this.height;
-    }
-
-    clone() {
-        let clone = new Dimension(this.x, this.y);
-        clone.addLabel(this.label);
-        return clone;
-    }
     
-}
-
-class Point {
-    constructor (x, y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    distance([point]) {
-        return Math.sqrt(((this.x - point.x)*(this.x - point.x)) +
-                         ((this.y - point.y)*(this.y - point.y)));
-    }
-
-    magnitude(){
-        return this.distance(new Point(0,0));
-    }
-
-    translate(point, type) {
-        if (type === translate.ADD || type === null) {
-            this.x += point.x;
-            this.y += point.y;
-        } 
-        else if (type === translate.SUBTRACT) {
-            this.x -= point.x;
-            this.y -= point.y;
-        }
-    }
-
-    scale(s) {
-        this.x *= s; 
-        this.y *= s;
-    }
-
-    middle(point) {
-        this.translate(point, translate.ADD).scale(0.5);
-    }
-
-    /**
-     * Return a point with unit magnitude.
-     */
-    normalize(){
-        this.scale(1.0/this.magnitude());
-    }
-
-    update(point){
-        this.x = point.x;
-        this.y = point.y;
-    }
-
-    /**
-     * Find the nearest neighbor and the penality
-     * for not choosing the nearest neighbor.
-     */
-    nearest(neighbors){
-        if(neighbors.length === 0){
-            throw "no neighbors";
-        } else if (neighbors.length === 1){
-            let neighbor = neighbors[0];
-            return { nearest : neighbor,
-                     penalty : 0,
-                     distance : this.distance(neighbor) };
-        } else {
-            let neighbor = neighbors[0];
-            let r = this.nearest(neighbors.slice(1));
-            let distance = this.distance(neighbor);
-            if(distance < r.distance){
-                return { nearest : neighbor,
-                    penalty : r.distance - distance,
-                    distance : distance };
-            } else { 
-                return r; 
-            }
-        }
-    }
-    
-    /* counter clockwise rotation*/
-    r90(){
-        this.update(new Point(-1.0 * this.y,this.x));
-    }
-    
-    r180(){
-        this.update(new Point(-1.0 * this.x,-1.0*this.y));
-    }
-    
-    r270(){
-        this.update(new Point(this.y,-1.0*this.x));
-    }
 }
 
 class D3Object {
     constructor(label) {
         this.label = label;
-        this.absolute = new Point(0, 0);
-        this.relative = new Point(0, 0);
         this.dimension = new Dimension(0, 0);
         this.contentDimension = new Dimension(0, 0);
     }
@@ -187,6 +61,8 @@ class Site extends D3Object {
         this.agent = agent;
         this.states = siteData.site_states;
         this.currentState = null;
+        this.startAngle = 0;
+        this.endAngle = 0;
     }
     
     setId(id) {
@@ -202,6 +78,23 @@ class Site extends D3Object {
 
     getAgent() {
         return this.agent;
+    }
+
+    setAngles(startAngle, endAngle) {
+        this.startAngle = startAngle;
+        this.endAngle = endAngle;
+    }
+
+    getAngle() {
+        return (this.startAngle + this.endAngle)/2;
+    }
+    cartX (r) {
+        //console.log(this.startAngle);
+        return r * Math.cos(((this.startAngle + this.endAngle)/2 + 3 * Math.PI/2));
+
+    }
+    cartY (r) {
+        return r * Math.sin(((this.startAngle + this.endAngle)/2 + 3 * Math.PI/2));
     }
 }
 
@@ -227,16 +120,6 @@ class Node extends D3Object {
     getSite(siteId) {
         return this.listSites()[siteId];
     }
-
-    preferredSize() {
-        let d = this.listSites()
-                    .reduce(function(acc,site)
-                    {
-                        return acc.add(site.getDimension());
-                    },
-                    this.contentDimension.scale(1.0));
-        return this.contentDimension.scale(2.0).max(d);
-    }   
 }
 
 class SiteLink {
@@ -248,12 +131,7 @@ class SiteLink {
     equals(otherLink) {
         return otherLink.nodeId == this.nodeId && otherLink.siteId == this.siteId;
     }
-}
 
-class SiteEdge {
-    constructor(targetNode, target) {
-
-    }
 }
 
 class DataStorage {

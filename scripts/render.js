@@ -72,6 +72,7 @@ class ContactMap {
                 let layout = new Layout(map, new Dimension(w, h), margin);
                 let renderer = new Render(map.id, layout);
                 map.clearData();
+                renderer.generateLinks();
                 renderer.render();
             }
             else {
@@ -124,6 +125,17 @@ class Render {
                               .map(function(node){
                                 return node.label;
                               });
+                        
+        this.siteList = [];
+        let data = this.layout.contactMap.data;
+       // console.log(data);
+        for (let key in data.listNodes()) { 
+            let sites = data.listNodes()[key].listSites();
+            for (let key in sites) {
+                this.siteList.push(sites[key]);
+            }
+        }
+
         
         
     }
@@ -131,9 +143,66 @@ class Render {
     render() {
         console.log("rendering");
         this.renderDonut();
+        this.renderLinks();
+    }
+
+    generateLinks() {
+        let data = this.layout.contactMap.data;
+        this.siteLinks = [];
+
+        for (let sites in this.siteList) {
+            let siteList = this.siteList;
+            let links = siteList[sites].listLinks();
+            //console.log(links);
+            for (let link in links) {
+                //console.log(data.getNode(links[link].nodeId).getSite(links[link].siteId));
+                //console.log(siteList[sites]);
+                let target = data.getNode(links[link].nodeId).getSite(links[link].siteId);
+                let source = siteList[sites];
+                //console.log(target);
+                let linkEdge = {target: target, source: source};
+                //linkEdge.addData(target, source);
+                this.siteLinks.push(linkEdge);
+            }
+        }
+    }
+
+    renderLinks() {
+        let layout = this.layout;
+        let width = layout.dimension.width;
+        let height = layout.dimension.height;
+    
+        let radius = Math.min(width, height)/2; 
+        let nodew = radius/6;
+        let sitew = radius/8;
+        let innerRadius = radius - nodew - sitew;
+
+        let svg = this.svg;
+        var line = d3.radialLine()
+            .curve(d3.curveBundle.beta(0.85))
+            .radius(function(d) { return innerRadius; })
+            .angle(function(d) { return d.getAngle(); });
+            /*
+            .x(function(d) { return d.cartX(innerRadius); })
+            .y(function(d) { return d.cartY(innerRadius); });
+            */
+        let links = svg.selectAll('.links')
+                    .data(this.siteLinks)
+                    .enter().append("path")
+                    .attr("class", "links")
+                    .attr("d", function(d) {return line([d.target, d.source]); 
+                        })
+                    .attr("stroke", "steelblue")
+                    .attr("stroke-opacity", 0.4);
+                    /*.attr("x1", function(d) {return d.target.cartX(innerRadius);}) 
+                    .attr("y1", function(d) {return d.target.cartY(innerRadius);})
+                    .attr("x2", function(d) {return d.source.cartX(innerRadius);})
+                    .attr("y2", function(d) {return d.source.cartY(innerRadius);});
+                    */
     }
 
     renderDonut() {
+        let siteList = this.siteList;
         let layout = this.layout;
         let width = layout.dimension.width;
         let height = layout.dimension.height;
@@ -142,53 +211,39 @@ class Render {
 
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
 
+        
         let radius = Math.min(width, height)/2; 
         let nodew = radius/6;
         let sitew = radius/8;
+        let innerRadius = radius - nodew - sitew;
+
         let nodeArc = d3.arc()
                     .outerRadius(radius - 10)
                     .innerRadius(radius - nodew);
         
         let siteArc = d3.arc()
                     .outerRadius(radius - nodew)
-                    .innerRadius(radius - nodew - sitew);
+                    .innerRadius(innerRadius);
 
         let node = d3.pie() 
-                      .sort(null)
-                      .value(function(d) {
-                          console.log(d.listSites().length);
-                          return d.listSites().length;
-                      });
+                    .sort(null)
+                    .value(function(d) {
+                        return d.listSites().length;
+                    });
         
         let site = d3.pie() 
-                      .sort(null)
-                      .value(function(d) {
-                          return 1;
-                      });
-
-        let donut = d3.pie() 
-                      .sort(null)
-                      .value(function(d) {
-                          console.log(d.listSites().length);
-                          return d.listSites().length;
-                      });
+                    .sort(null)
+                    .value(function(d) {
+                        return 1;
+                    });
 
         
-        let siteList = [];
-        let data = renderer.layout.contactMap.data;
-        console.log(data);
-        for (let key in data.listNodes()) { 
-            let sites = data.listNodes()[key].listSites();
-            for (let key in sites) {
-                siteList.push(sites[key]);
-            }
-        }
+        let data = this.layout.contactMap.data;
 
-        console.log(siteList);
         let svg = this.svg;
         let gNode = svg.selectAll(".nodeArc")
-                   .data(node(data.listNodes()))
-                   .enter().append("g");
+                    .data(node(data.listNodes()))
+                    .enter().append("g");
         let gSite = svg.selectAll(".siteArc") 
                     .data(site(siteList))
                     .enter().append("g");
@@ -230,9 +285,25 @@ class Render {
              //place the text halfway on the arc
             .text(function(d) { 
                 let label = d.data.label;
-                console.log(d);
+                d.data.startAngle = d.startAngle;
+                d.data.endAngle = d.endAngle;
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
+
+        //console.log(data);
+        //console.log(siteList);
+
+        gSite
+            .data(siteList)
+            .append("circle")
+            .attr('cx', function(d) {
+                return d.cartX(innerRadius);
+            })
+            .attr('cy', function(d) {
+                return d.cartY(innerRadius);
+            })
+            .attr('r', '5px')
+            .attr("fill", "red");
 
     }
 /*  

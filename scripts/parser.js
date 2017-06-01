@@ -36,7 +36,7 @@ class Parser {
 
   populateData(data) {
     let dataStorage = new DataStorage(data, 0);
-    console.log(dataStorage);
+    //console.log(dataStorage);
     return dataStorage;
   }
 

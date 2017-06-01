@@ -4,6 +4,13 @@ body {
   -webkit-font-smoothing:antialiased;
 }
 
+.link {
+  stroke: steelblue;
+  stroke-opacity: 0.4;
+  fill: none;
+  pointer-events: none;
+}
+
 .node { cursor: pointer; }
 #graph {
     transition:transform 200ms ease;
