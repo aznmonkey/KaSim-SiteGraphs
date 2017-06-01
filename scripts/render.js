@@ -111,15 +111,17 @@ class Render {
                             this.layout.margin.top +
                             this.layout.margin.bottom);
         
-        this.zoom = this.svg.append("g").attr("transform", "translate(" + width/2 +"," + height/2 + ")");
+        this.zoom = this.svg.append("g").attr("transform", "translate(" + width/2 + "," + height/2 + ")");
         this.svg = this.zoom.append("g");
 
         let svg = this.svg;
-        let transform;
 
-        this.zoom.call(d3.zoom().on("zoom",
-	  		        function () { transform = d3.event.transform;
-					      svg.attr("transform", d3.event.transform); }));
+        this.zoom.call(d3.zoom().on("zoom", function () { 
+            svg.attr("transform", d3.event.transform); 
+        }));
+        this.zoom.call(d3.drag().on("drag", function() {
+            svg.attr("transform", "translate(" + d3.event.x + "," + d3.event.y +")");
+        }));
         this.agentNames = layout.contactMap.data
                               .listNodes()
                               .map(function(node){
