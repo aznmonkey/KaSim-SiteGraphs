@@ -174,8 +174,9 @@ class Render {
     
         let radius = Math.min(width, height)/2; 
         let nodew = radius/6;
+        let statew = radius/12;
         let sitew = radius/8;
-        let innerRadius = radius - nodew - sitew;
+        let innerRadius = radius - nodew - statew - sitew;
 
         let svg = this.svg;
         var line = d3.radialLine()
@@ -214,15 +215,20 @@ class Render {
         
         let radius = Math.min(width, height)/2; 
         let nodew = radius/6;
+        let statew = radius/12;
         let sitew = radius/8;
-        let innerRadius = radius - nodew - sitew;
+        let innerRadius = radius - nodew - statew - sitew;
 
         let nodeArc = d3.arc()
                     .outerRadius(radius - 10)
                     .innerRadius(radius - nodew);
         
-        let siteArc = d3.arc()
+        let stateArc = d3.arc()
                     .outerRadius(radius - nodew)
+                    .innerRadius(radius - nodew - statew);
+
+;       let siteArc = d3.arc()
+                    .outerRadius(radius - nodew - statew)
                     .innerRadius(innerRadius);
 
         let node = d3.pie() 
@@ -231,6 +237,12 @@ class Render {
                         return d.listSites().length;
                     });
         
+        let state = d3.pie()
+                    .sort(null)
+                    .value(function(d) {
+                        return 1;
+                    });
+
         let site = d3.pie() 
                     .sort(null)
                     .value(function(d) {
@@ -247,6 +259,7 @@ class Render {
         let gSite = svg.selectAll(".siteArc") 
                     .data(site(siteList))
                     .enter().append("g");
+        
 
         gNode.append("path")
             .attr("d", nodeArc)
@@ -267,6 +280,11 @@ class Render {
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
+
+        gState.append("path")
+            .attr("d", stateArc)
+            .attr("id", function(d,i) { return "siteArc_" + i;})
+            .style("fill", function(d,i) { return c20(i);});
 
         gSite.append("path")
             .attr("d", siteArc)

@@ -85,6 +85,10 @@ class Site extends D3Object {
         this.endAngle = endAngle;
     }
 
+    getStates() {
+        return this.states;
+    }
+    
     getAngle() {
         return (this.startAngle + this.endAngle)/2;
     }
