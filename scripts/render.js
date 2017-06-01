@@ -62,7 +62,7 @@ class ContactMap {
         let parser = new Parser();
         /* populates the data */
         parser.readJson(json).then( function(response) {
-            console.log(response);
+            //console.log(response);
             map.data = response;
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
@@ -111,15 +111,17 @@ class Render {
                             this.layout.margin.top +
                             this.layout.margin.bottom);
         
-        this.zoom = this.svg.append("g").attr("transform", "translate(" + width/2 +"," + height/2 + ")");
+        this.zoom = this.svg.append("g").attr("transform", "translate(" + width/2 + "," + height/2 + ")");
         this.svg = this.zoom.append("g");
 
         let svg = this.svg;
-        let transform;
 
-        this.zoom.call(d3.zoom().on("zoom",
-	  		        function () { transform = d3.event.transform;
-					      svg.attr("transform", d3.event.transform); }));
+        this.zoom.call(d3.zoom().on("zoom", function () { 
+            svg.attr("transform", d3.event.transform); 
+        }));
+        this.zoom.call(d3.drag().on("drag", function() {
+            svg.attr("transform", "translate(" + d3.event.x + "," + d3.event.y +")");
+        }));
         this.agentNames = layout.contactMap.data
                               .listNodes()
                               .map(function(node){
@@ -128,7 +130,11 @@ class Render {
                         
         this.siteList = [];
         let data = this.layout.contactMap.data;
-       // console.log(data);
+        
+        this.hierarchy = data.constructHierarchy();
+
+        //console.log(this.hierarchy);
+        // console.log(data);
         for (let key in data.listNodes()) { 
             let sites = data.listNodes()[key].listSites();
             for (let key in sites) {
@@ -157,7 +163,7 @@ class Render {
             for (let link in links) {
                 //console.log(data.getNode(links[link].nodeId).getSite(links[link].siteId));
                 //console.log(siteList[sites]);
-                let target = data.getNode(links[link].nodeId).getSite(links[link].siteId);
+                let target = data.getSite(links[link].nodeId, links[link].siteId);
                 let source = siteList[sites];
                 //console.log(target);
                 let linkEdge = {target: target, source: source};
@@ -168,6 +174,7 @@ class Render {
     }
 
     renderLinks() {
+        let data = this.layout.contactMap.data;
         let layout = this.layout;
         let width = layout.dimension.width;
         let height = layout.dimension.height;
@@ -179,7 +186,16 @@ class Render {
         let innerRadius = radius - nodew - statew - sitew;
 
         let svg = this.svg;
-        var line = d3.radialLine()
+        let hierarchy = this.hierarchy;
+        let cluster =  d3.cluster()
+            .separation(function(a, b) { return 1; })
+            .size([360, innerRadius]);
+        let line = d3.radialLine()
+            .curve(d3.curveBundle.beta(0.85))
+            .radius(function(d) { return d.y; })
+            .angle(function(d) { return d.x / 180 * Math.PI; });
+
+        /*var line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
             .radius(function(d) { return innerRadius; })
             .angle(function(d) { return d.getAngle(); });
@@ -187,7 +203,20 @@ class Render {
             .x(function(d) { return d.cartX(innerRadius); })
             .y(function(d) { return d.cartY(innerRadius); });
             */
+
+        cluster(hierarchy);
+
+        console.log(data.packageLinks(hierarchy.leaves()));
         let links = svg.selectAll('.links')
+            .data(data.packageLinks(hierarchy.leaves()))
+            .enter().append("path")
+            .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
+            .attr("class", "link")
+            .attr("d", line)
+            .attr("stroke", "steelblue")
+            .attr("stroke-opacity", 0.4);;
+
+        /*let links = svg.selectAll('.links')
                     .data(this.siteLinks)
                     .enter().append("path")
                     .attr("class", "links")
@@ -195,11 +224,7 @@ class Render {
                         })
                     .attr("stroke", "steelblue")
                     .attr("stroke-opacity", 0.4);
-                    /*.attr("x1", function(d) {return d.target.cartX(innerRadius);}) 
-                    .attr("y1", function(d) {return d.target.cartY(innerRadius);})
-                    .attr("x2", function(d) {return d.source.cartX(innerRadius);})
-                    .attr("y2", function(d) {return d.source.cartY(innerRadius);});
-                    */
+        */
     }
 
     renderDonut() {
@@ -207,47 +232,42 @@ class Render {
         let layout = this.layout;
         let width = layout.dimension.width;
         let height = layout.dimension.height;
-    
         let renderer = this;
 
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
 
         
-        let radius = Math.min(width, height)/2; 
+        let radius = Math.min(width, height)/2;
+        let paddingw = radius/100; 
         let nodew = radius/6;
         let statew = radius/12;
         let sitew = radius/8;
         let innerRadius = radius - nodew - statew - sitew;
 
+        let cluster = d3.cluster()
+            .size([360, innerRadius]);
+            
         let nodeArc = d3.arc()
-                    .outerRadius(radius - 10)
-                    .innerRadius(radius - nodew);
+                    .outerRadius(radius - 10 )
+                    .innerRadius(radius - nodew + paddingw);
         
-        let stateArc = d3.arc()
-                    .outerRadius(radius - nodew)
-                    .innerRadius(radius - nodew - statew);
-
-;       let siteArc = d3.arc()
-                    .outerRadius(radius - nodew - statew)
+        let siteArc = d3.arc()
+                    .outerRadius(radius - nodew - statew )
                     .innerRadius(innerRadius);
 
         let node = d3.pie() 
                     .sort(null)
                     .value(function(d) {
                         return d.listSites().length;
-                    });
-        
-        let state = d3.pie()
-                    .sort(null)
-                    .value(function(d) {
-                        return 1;
-                    });
+                    })
+                    .padAngle(0.01);
 
         let site = d3.pie() 
                     .sort(null)
                     .value(function(d) {
                         return 1;
-                    });
+                    })
+                    .padAngle(0.01);
 
         
         let data = this.layout.contactMap.data;
@@ -256,11 +276,13 @@ class Render {
         let gNode = svg.selectAll(".nodeArc")
                     .data(node(data.listNodes()))
                     .enter().append("g");
+        
+
         let gSite = svg.selectAll(".siteArc") 
                     .data(site(siteList))
                     .enter().append("g");
         
-
+        /* draw node arcs paths */
         gNode.append("path")
             .attr("d", nodeArc)
             .attr("id", function(d,i) { return "nodeArc_" + i;})
@@ -273,19 +295,12 @@ class Render {
             })
 			.style('font-size', '20px')
             .attr('text-anchor', 'middle')
-			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
             .style("fill", "black")
-             //place the text halfway on the arc
             .text(function(d) { 
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
-                return label; });
-
-        gSite.append("path")
-            .attr("d", stateArc)
-            .attr("id", function(d,i) { return "siteArc_" + i;})
-            .style("fill", function(d,i) { return c20(i);});
-
+                return label; });        
+        
         gSite.append("path")
             .attr("d", siteArc)
             .attr("id", function(d,i) { return "siteArc_" + i;})
@@ -311,6 +326,7 @@ class Render {
         //console.log(data);
         //console.log(siteList);
 
+        /* draws red dot at center of arc, for debugging purposes */
         gSite
             .data(siteList)
             .append("circle")
@@ -323,190 +339,48 @@ class Render {
             .attr('r', '5px')
             .attr("fill", "red");
 
-    }
-/*  
-    renderNodes() {
-        let dragbarw = 10;
-        let renderer = this;
-        renderer.layout.circleNodes();
+         for (let sites in this.siteList) {
+            let site = this.siteList[sites];
+            console.log(site.getStates());
 
-        let tooltip = this.tooltip = this.root
-                           .append("div")
-                           .attr("class", "contact-tooltip")
-                           .style("visibility", "hidden");
-        
+            let state = d3.pie()
+                    .sort(null)
+                    .value(function(d) {
+                        return 1;
+                    })
+                    .startAngle(site.startAngle)
+                    .endAngle(site.endAngle)
+                    .padAngle(0.01);
 
-        
-        
+            let stateArc = d3.arc()
+                .outerRadius(radius - nodew)
+                .innerRadius(radius - nodew - statew + paddingw);
+            /* draw state arc paths */
+            let gState = svg.selectAll(".stateArc")
+                    .data(state(site.getStates()))
+                    .enter().append("g");
 
-        let nodeGroup = this.svg
-            .selectAll(".svg-group")
-            .data(renderer.layout.contactMap.data.listNodes())
-            .enter()
-            .append("g")
-            .attr("class","node-group")
-            .attr("transform",function(d) {
-                return "translate("+d.absolute.x+","+d.absolute.y+")";
-            });
-          
-        
-        
-        // render node labels 
-        let textGroup = nodeGroup
-            .append("text")
-            .attr("class","node-text")
-            .style("text-anchor", "middle")
-            .style("alignment-baseline", "middle")
-            .text(function(d){
-                let label = d.label;
-                // truncate labels if they're too long
-                if (label.length > 10) {
-                    label = label.substring(0,10);
-                }
+            gState.append("path")
+            .attr("d", stateArc)
+            .attr("id", function(d,i) { return "stateArc_" + site.label + "_" + i;})
+            .style("fill", function(d,i) { return c20(i);});
+
+            gState.append("text")
+            .attr("transform", function(d) { //set the label's origin to the center of the arc
+                return "translate(" + stateArc.centroid(d) + ")";
+            })
+			.style('font-size', '20px')
+            .attr('text-anchor', 'middle')
+			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
+            .style("fill", "black")
+             //place the text halfway on the arc
+            .text(function(d) { 
+                let label = d.data.name;
+                label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
-        
-        let handle = new DragHandle(dragbarw, nodeGroup);
-        
-        nodeGroup.call(handle.drag);
-        
-        let rectGroup = nodeGroup
-            .append("rect")
-            .attr("rx", 5)
-            .attr("ry", 5)
-            .attr("class","node-rect")
-            .attr("fill", '#ADD8E6')
-            .attr("fill-opacity", 0.4)
-            .on("mousemove", function(){
-                let event = d3.event;
-                let style_top = (event.clientY-10)+"px"; // pageY , clientY , layerY , screenY
-                let style_left = (event.clientX+10)+"px";
-                return tooltip
-                       .style("top",style_top)
-                       .style("left",style_left);
-            });
 
-        
 
-        
-        // render node rectangles 
-        rectGroup
-                   .attr("x", function(d){ return d.anchor(d.relative).x; })
-                   .attr("y", function(d){ return d.anchor(d.relative).y; })
-                   .attr("width", function(d){ return d.getDimension().width; })
-                   .attr("height", function(d){ return d.getDimension().height; });
-  
-        let layout = this.layout;
-        datum is map for data
-        textGroup
-            .datum(function(d){ console.log( d );
-                                layout
-                                .setNodeDimensions(d,this.getBBox());
-                                return d; });
-        
-    }
-}
-/*
-class DragHandle {
-    constructor(width, rectGroup) {
-        let dragbarw = width;
-        this.dragright = d3.drag()
-                          .on("drag", this.rDragResize);
-
-        this.dragleft = d3.drag()
-                         .on("drag", this.lDragResize);
-
-        this.dragtop = d3.drag()
-                        .on("drag", this.tDragResize);
-
-        this.dragbottom = d3.drag()
-                           .on("drag", this.bDragResize);        
-
-        this.drag = d3.drag()
-                     .on("drag", this.dragMove);
-
-        this.dragbarleft = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x - (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y + (dragbarw/2); })
-            .attr("height", function(d) { return d.getDimension().height - dragbarw; })
-            .attr("id", "dragleft")
-            .attr("width", dragbarw)
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragleft);
-
-        this.dragbarright = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x + d.getDimension().width - (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y + (dragbarw/2); })
-            .attr("height", function(d) { return d.getDimension().height - dragbarw; })
-            .attr("id", "dragright")
-            .attr("width", dragbarw)
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragright);
-
-        this.dragbartop = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x + (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y - (dragbarw/2); })
-            .attr("height", dragbarw)
-            .attr("id", "dragtop")
-            .attr("width", function(d) { return d.getDimension().width - dragbarw;})
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragtop);
-
-        this.dragbarbottom = rectGroup.append("rect")
-            .attr("x", function(d) { return d.anchor(d.relative).x + (dragbarw/2); })
-            .attr("y", function(d) { return d.anchor(d.relative).y + d.getDimension().height - (dragbarw/2); })
-            .attr("height", dragbarw)
-            .attr("id", "dragbottom")
-            .attr("width", function(d) { return d.getDimension().width - dragbarw; })
-            .attr("fill", "blue")
-            .attr("fill-opacity", 1)
-            .attr("cursor", "ew-resize")
-            .call(this.dragbottom);
+        }
 
     }
-        add drag bars to nodes å
-    dragMove(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-
-        d3.select('#dragtop').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-        d3.select('#dragbottom').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-        d3.select('#dragleft').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-        d3.select('#dragright').attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    rDragResize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    lDragResize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    tDragreSize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")");
-    }
-
-    bDragResize(d) {
-        d.absolute.update(d3.event);
-        d3.select(this).attr("transform",
-                                "translate(" + d.absolute.x + "," + d.absolute.y + ")")
-    }
- */  
 }

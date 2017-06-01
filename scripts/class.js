@@ -19,7 +19,6 @@ class Dimension {
     }
 
     update(dimension) {
-        console.log(dimension);
         this.height = dimension.height;
         this.width = dimension.width;
     }
@@ -59,7 +58,9 @@ class Site extends D3Object {
                 return new SiteLink(link[0],link[1]); 
             });
         this.agent = agent;
-        this.states = siteData.site_states;
+        this.states = siteData.site_states.map(function(state) {
+                return new State(state);
+            });
         this.currentState = null;
         this.startAngle = 0;
         this.endAngle = 0;
@@ -88,7 +89,7 @@ class Site extends D3Object {
     getStates() {
         return this.states;
     }
-    
+
     getAngle() {
         return (this.startAngle + this.endAngle)/2;
     }
@@ -123,6 +124,13 @@ class Node extends D3Object {
 
     getSite(siteId) {
         return this.listSites()[siteId];
+    }
+
+}
+
+class State {
+    constructor(name) {
+        this.name = name;
     }
 }
 
@@ -174,6 +182,79 @@ class DataStorage {
         let result = distances.reduce(function(a,b){ 
             return a + b; }, 0);
         return result;
+    }
+
+    constructHierarchy() {
+        let siteList = [];
+        let data = this.data;
+       // console.log(data);
+        for (let key in data) { 
+            let sites = data[key].listSites();
+            for (let key in sites) {
+                siteList.push(sites[key]);
+            }
+        }
+
+        let hierarchyBase = [];
+        for (let sites in siteList)  {
+            //console.log(siteList[sites]);
+            let entry = {};
+            entry.name = 'root.' + siteList[sites].getAgent().label + '.' + siteList[sites].label;
+            let links = siteList[sites].listLinks();
+            let linkArray = [];
+
+            for (let link in links) {               
+                //console.log(data);
+                let site = this.getSite(links[link].nodeId, links[link].siteId);
+                linkArray.push('root.' + site.getAgent().label + '.' + site.label);
+            }
+
+            entry.links = linkArray;
+            hierarchyBase.push(entry);
+        }
+
+        /* taken from Michael Bostock's hierarchy edge bundling example at https://bl.ocks.org/mbostock/7607999  */
+        let map = {};
+
+        function find(name, data) {
+            let node = map[name], i;
+            if (!node) {
+            node = map[name] = data || {name: name, children: []};
+            if (name.length) {
+                node.parent = find(name.substring(0, i = name.lastIndexOf(".")));
+                node.parent.children.push(node);
+                node.key = name.substring(i + 1);
+            }
+            }
+            return node;
+        }
+
+        hierarchyBase.forEach(function(d) {
+            find(d.name, d);
+        });
+
+        return d3.hierarchy(map[""]);
+    }
+
+    packageLinks(nodes) {
+     
+        let map = {},
+            links = [];
+
+        // Compute a map from name to node.
+        nodes.forEach(function(d) {
+            //console.log(d);
+            map[d.data.name] = d;
+        });
+
+        // For each import, construct a link from the source to target node.
+        nodes.forEach(function(d) {
+            if (d.data.links) d.data.links.forEach(function(i) {
+            links.push(map[d.data.name].path(map[i]));
+            });
+        });
+
+        return links;
     }
 }
 
