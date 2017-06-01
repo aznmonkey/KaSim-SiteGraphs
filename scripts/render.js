@@ -62,7 +62,7 @@ class ContactMap {
         let parser = new Parser();
         /* populates the data */
         parser.readJson(json).then( function(response) {
-            console.log(response);
+            //console.log(response);
             map.data = response;
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
@@ -130,7 +130,11 @@ class Render {
                         
         this.siteList = [];
         let data = this.layout.contactMap.data;
-       // console.log(data);
+        
+        this.hierarchy = data.constructHierarchy();
+
+        //console.log(this.hierarchy);
+        // console.log(data);
         for (let key in data.listNodes()) { 
             let sites = data.listNodes()[key].listSites();
             for (let key in sites) {
@@ -159,7 +163,7 @@ class Render {
             for (let link in links) {
                 //console.log(data.getNode(links[link].nodeId).getSite(links[link].siteId));
                 //console.log(siteList[sites]);
-                let target = data.getNode(links[link].nodeId).getSite(links[link].siteId);
+                let target = data.getSite(links[link].nodeId, links[link].siteId);
                 let source = siteList[sites];
                 //console.log(target);
                 let linkEdge = {target: target, source: source};
@@ -170,6 +174,7 @@ class Render {
     }
 
     renderLinks() {
+        let data = this.layout.contactMap.data;
         let layout = this.layout;
         let width = layout.dimension.width;
         let height = layout.dimension.height;
@@ -181,7 +186,16 @@ class Render {
         let innerRadius = radius - nodew - statew - sitew;
 
         let svg = this.svg;
-        var line = d3.radialLine()
+        let hierarchy = this.hierarchy;
+        let cluster =  d3.cluster()
+            .separation(function(a, b) { return 1; })
+            .size([360, innerRadius]);
+        let line = d3.radialLine()
+            .curve(d3.curveBundle.beta(0.85))
+            .radius(function(d) { return d.y; })
+            .angle(function(d) { return d.x / 180 * Math.PI; });
+
+        /*var line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
             .radius(function(d) { return innerRadius; })
             .angle(function(d) { return d.getAngle(); });
@@ -189,7 +203,20 @@ class Render {
             .x(function(d) { return d.cartX(innerRadius); })
             .y(function(d) { return d.cartY(innerRadius); });
             */
+
+        cluster(hierarchy);
+
+        console.log(data.packageLinks(hierarchy.leaves()));
         let links = svg.selectAll('.links')
+            .data(data.packageLinks(hierarchy.leaves()))
+            .enter().append("path")
+            .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
+            .attr("class", "link")
+            .attr("d", line)
+            .attr("stroke", "steelblue")
+            .attr("stroke-opacity", 0.4);;
+
+        /*let links = svg.selectAll('.links')
                     .data(this.siteLinks)
                     .enter().append("path")
                     .attr("class", "links")
@@ -197,11 +224,7 @@ class Render {
                         })
                     .attr("stroke", "steelblue")
                     .attr("stroke-opacity", 0.4);
-                    /*.attr("x1", function(d) {return d.target.cartX(innerRadius);}) 
-                    .attr("y1", function(d) {return d.target.cartY(innerRadius);})
-                    .attr("x2", function(d) {return d.source.cartX(innerRadius);})
-                    .attr("y2", function(d) {return d.source.cartY(innerRadius);});
-                    */
+        */
     }
 
     renderDonut() {
@@ -209,37 +232,42 @@ class Render {
         let layout = this.layout;
         let width = layout.dimension.width;
         let height = layout.dimension.height;
-    
         let renderer = this;
 
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
 
         
-        let radius = Math.min(width, height)/2; 
+        let radius = Math.min(width, height)/2;
+        let paddingw = radius/100; 
         let nodew = radius/6;
         let statew = radius/12;
         let sitew = radius/8;
         let innerRadius = radius - nodew - statew - sitew;
 
+        let cluster = d3.cluster()
+            .size([360, innerRadius]);
+            
         let nodeArc = d3.arc()
-                    .outerRadius(radius - 10)
-                    .innerRadius(radius - nodew);
+                    .outerRadius(radius - 10 )
+                    .innerRadius(radius - nodew + paddingw);
         
         let siteArc = d3.arc()
-                    .outerRadius(radius - nodew - statew)
+                    .outerRadius(radius - nodew - statew )
                     .innerRadius(innerRadius);
 
         let node = d3.pie() 
                     .sort(null)
                     .value(function(d) {
                         return d.listSites().length;
-                    });
+                    })
+                    .padAngle(0.01);
 
         let site = d3.pie() 
                     .sort(null)
                     .value(function(d) {
                         return 1;
-                    });
+                    })
+                    .padAngle(0.01);
 
         
         let data = this.layout.contactMap.data;
@@ -301,7 +329,7 @@ class Render {
         //console.log(data);
         //console.log(siteList);
 
-        console.log(siteList);
+        /* draws red dot at center of arc, for debugging purposes */
         gSite
             .data(siteList)
             .append("circle")
@@ -324,11 +352,12 @@ class Render {
                         return 1;
                     })
                     .startAngle(site.startAngle)
-                    .endAngle(site.endAngle);
+                    .endAngle(site.endAngle)
+                    .padAngle(0.01);
 
             let stateArc = d3.arc()
                 .outerRadius(radius - nodew)
-                .innerRadius(radius - nodew - statew);
+                .innerRadius(radius - nodew - statew + paddingw);
             /* draw state arc paths */
             let gState = svg.selectAll(".stateArc")
                     .data(state(site.getStates()))
@@ -336,7 +365,7 @@ class Render {
 
             gState.append("path")
             .attr("d", stateArc)
-            .attr("id", function(d,i) { console.log(d,i); return "stateArc_" + site.label + "_" + i;})
+            .attr("id", function(d,i) { return "stateArc_" + site.label + "_" + i;})
             .style("fill", function(d,i) { return c20(i);});
 
             gState.append("text")
