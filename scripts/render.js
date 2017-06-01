@@ -281,7 +281,7 @@ class Render {
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
 
-        gState.append("path")
+        gSite.append("path")
             .attr("d", stateArc)
             .attr("id", function(d,i) { return "siteArc_" + i;})
             .style("fill", function(d,i) { return c20(i);});
