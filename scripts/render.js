@@ -155,16 +155,17 @@ class Render {
 
         // convert sitelinks into splines
         // remove duplicates (source,target = target,source)
-        let set = [];
+        let set = {};
 
         let splines = this.siteLinks.filter(d => {
                 const link = d.source.id + '-' + d.target.id;
                 const linkR = d.target.id + '-' + d.source.id;
-                if (set.indexOf(linkR) > -1 || set.indexOf(link) > -1) {
+                if (set[d.source.label] && set[d.source.label].indexOf(d.target) > -1) {
                     return false;
                 }
 
-                set.push(link);
+                if (!set[d.target.label]) { set[d.target.label] = []; }
+                set[d.target.label].push(d.source);
                 return true;
             })
             .map(d => {
@@ -333,11 +334,6 @@ class Render {
                 const b_diff = b_hi - b_low;
                 const a_diff = a_hi - a_low;
 
-                if (a.label === 'dbd' && a.agent.label === 'XRCC1') {
-                    console.log(b.label, b.agent.label)
-                    console.log('\t',[a_hi, a_low], [b_hi, b_low])
-                    console.log('\t',a_id, a_ub, b_ub, half)
-                }
                 if (Math.abs(b_diff) === Math.abs(a_diff)) {
                     return b_diff;
                 }
