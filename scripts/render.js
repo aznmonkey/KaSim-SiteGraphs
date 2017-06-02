@@ -372,9 +372,10 @@ class Render {
 
         this.svg.selectAll('.arc').each((d, i, el) => {
             d.data.arc = d;
-            d.data.svg = el[i];
-        })
+        });
 
+
+        // draw sites
         function getRotation(site) {
             let numSites = site.agent.sites.length;
             let index = site.agent.sites.indexOf(site);
@@ -387,11 +388,9 @@ class Render {
         let site = this.svg.selectAll('.site')
             .data(this.siteList)
         .enter().append('g')
+            .each(d => d.angle = getRotation(d))
             .attr('class','site')
-            .attr('transform', d => {
-                d.angle = getRotation(d);
-                return 'rotate(' + d.angle + ')';
-            });
+            .attr('transform', d => 'rotate(' + d.angle + ')');
 
         site.append('line')
             .attr('opacity', 0.5)
@@ -410,6 +409,30 @@ class Render {
             .attr('y', 4)
             .attr('transform', d => d.angle > 90 ? 'rotate(180)' : null)
             .attr('text-anchor', d => d.angle > 90 ? 'end' : 'start');
+
+        let states = site.append('g')
+            .attr('class','states');
+
+        let state = states.selectAll('.state')
+            .data(d => d.states)
+        .enter().append('g')
+            .attr('class','state')
+            .attr('transform','translate(' + this.radius + ',0)');
+
+        state.append('path')
+            .attr('d', (d,i,el) => {
+                let x = 100;
+                let y = (-el.length / 2 + i + 1) / (el.length + 1) * 100;
+
+                return 'M20,0C' + [x-10,0, x-20,y,x-2,y];
+            })
+            .attr('fill','none')
+            .attr('stroke','#ccc')
+        state.append('text')
+            .attr('x',100)
+            .attr('y', (d,i, el) => (-el.length / 2 + i + 1) / (el.length + 1) * 100 + 3)
+            .text(d => d.name);
+
     }
 
     get innerRadius() {
