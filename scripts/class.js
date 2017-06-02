@@ -91,8 +91,9 @@ class Site extends D3Object {
     }
 
     getAngle() {
-        return (this.startAngle + this.endAngle)/2;
+        return (this.startAngle + this.endAngle)/2 +3 * Math.PI/2;
     }
+    
     cartX (r) {
         //console.log(this.startAngle);
         return r * Math.cos(((this.startAngle + this.endAngle)/2 + 3 * Math.PI/2));
