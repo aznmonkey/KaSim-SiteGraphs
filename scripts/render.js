@@ -10,44 +10,6 @@ class Layout {
             bottom: 10, left: 10 };
         
     }
-    /*    
-    circleNodes(){
-        let w = this.dimension.width;
-        let h = this.dimension.height;
-        let nodes = contactMap.data.listNodes();
-    
-        console.log(this.dimension);
-        nodes.forEach(function(node,index,nodes){
-            let dx = 0;
-            let dy = 0;
-            let length = nodes.length;
-
-            if(length > 1){
-                let angle = 2*index*Math.PI/length;
-                dx = w * Math.cos(angle)/4;
-                dy = h * Math.sin(angle)/3;
-                console.log('x:' + dx + ' y:' + dy);
-            }
-            nodes[index].absolute = new Point(dx + w/2,
-                                              dy + h/2);
-
-            //set static node dimensions for now
-            nodes[index].dimension = new Dimension(50,50);
-    
-      });
-    }
-
- 
-
-    setNodeDimensions(node,dimensions){
-        console.log(dimensions);
-        node.contentDimension = new Dimension(dimensions.width, dimensions.height);
-    }
-
-    setSiteDimension(site,dimensions){
-        site.contentDimension = dimensions.clone();
-    }
-*/
 }
 
 
@@ -138,21 +100,6 @@ class Render {
             }
         }        
     }
-
-    render() {
-        // recalculate radius / dimensions
-        let width = this.layout.dimension.width;
-        let height = this.layout.dimension.height;
-        let margin = 120;
-        this.radius = Math.min(width, height)/2 - margin;
-        this.arcHeight = this.radius / 4;
-
-        // render chart
-        console.log('rendering');
-        this.renderDonut();
-        // this.renderLinks();
-    }
-
     generateLinks() {
         let data = this.layout.contactMap.data;
         this.siteLinks = [];
@@ -174,6 +121,20 @@ class Render {
         }
     }
 
+    render() {
+        // recalculate radius / dimensions
+        let width = this.layout.dimension.width;
+        let height = this.layout.dimension.height;
+        let margin = 120;
+        this.radius = Math.min(width, height)/2 - margin;
+        this.arcHeight = this.radius / 4;
+
+        // render chart
+        console.log('rendering');
+        this.renderDonut();
+        this.renderLinks();
+    }
+
     renderLinks() {
         let data = this.layout.contactMap.data;
 
@@ -184,22 +145,114 @@ class Render {
             .separation(function(a, b) { return 1; })
             .size([360, this.innerRadius]);
 
+        const radius = this.innerRadius;
         let line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
-            .radius(function(d) { return d.y; })
-            .angle(function(d) { return d.x / 180 * Math.PI; });
+            .radius((d) => d.radius || radius)
+            .angle((d) => (d.angle + 90) * Math.PI / 180);
 
         cluster(hierarchy);
 
-        console.log('leaves',data.packageLinks(hierarchy.leaves()));
-        let links = svg.selectAll('.links')
-            .data(data.packageLinks(hierarchy.leaves()))
-            .enter().append('path')
-            .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
+        // convert sitelinks into splines
+        // remove duplicates (source,target = target,source)
+        let set = [];
+
+        let splines = this.siteLinks.filter(d => {
+                const link = d.source.id + '-' + d.target.id;
+                const linkR = d.target.id + '-' + d.source.id;
+                if (set.indexOf(linkR) > -1 || set.indexOf(link) > -1) {
+                    return false;
+                }
+
+                set.push(link);
+                return true;
+            })
+            .map(d => {
+                const start = d.source;
+                const end = d.target
+
+                // control points
+                const cp = [];
+
+                if (d.source === d.target) {
+                    // create a custom spline for a site attached to itself
+                    let inset = 12;
+                    let breadth = 4;
+                    cp.push({
+                        radius: radius - inset,
+                        angle: start.angle
+                    },
+                    {
+                        radius: radius - inset * 2,
+                        angle: start.angle - breadth
+                    },
+                    {
+                        radius: radius - inset * 3,
+                        angle: start.angle
+                    },
+                    {
+                        radius: radius - inset * 2,
+                        angle: start.angle + breadth
+                    },
+                    {
+                        radius: radius - inset,
+                        angle: start.angle
+                    })
+                }
+                else {
+
+                    let inset = 20;
+                    cp.push({
+                        radius: radius - inset,
+                        angle: start.angle
+                    });
+
+                    if (d.source.agent === d.target.agent) {
+                        // don't bundle splines between same agent
+                        let avg = (start.angle + end.angle) / 2;
+                        if (Math.abs(start.angle - end.angle) > 180) {
+                            avg += 180;
+                        }
+                        cp.push({
+                            radius: radius - inset,
+                            angle: avg
+                        });
+                    }
+                    else {
+                        // general bundling
+
+                        // get midpt angle of agent arcs
+                        let mid1 = (d.source.agent.arc.endAngle + d.source.agent.arc.startAngle) / 2 * 180 / Math.PI - 90;
+
+                        let mid2 = (d.target.agent.arc.endAngle + d.target.agent.arc.startAngle) / 2 * 180 / Math.PI - 90;
+
+                        cp.push({
+                            radius: radius - inset * 2,
+                            angle: mid1
+                        },
+                        {
+                            radius: radius - inset * 2,
+                            angle: mid2
+                        });
+
+                    }
+
+                    cp.push({
+                        radius: radius - inset,
+                        angle: end.angle
+                    });
+                }
+
+                return [].concat(start, cp, end);
+            });
+
+        let links = svg.selectAll('.link')
+            .data(splines)
+        .enter().append('path')
             .attr('class', 'link')
             .attr('d', line)
             .attr('stroke', 'steelblue')
-            .attr('stroke-opacity', 0.4);;
+            .attr('stroke-opacity', 0.4);
 
     }
 
@@ -212,6 +265,88 @@ class Render {
                     .padAngle(0.01);
 
         let nodes = this.layout.contactMap.data.listNodes();
+
+        nodes.forEach(node => {
+            node.sites.sort((a,b) => {
+
+                let a_id, a_ub; // id, upper bound
+                let b_id, b_ub;
+
+                const half = nodes.length / 2;
+
+                // count up the linked nodes whose ids are above/below the sites
+                let a_low = 0
+                    ,a_hi = 0
+                    ,b_low = 0
+                    ,b_hi = 0;
+
+                // divide the pie in "half", centered on the node of the current site
+                if (a.links.length > 0) {
+                    a_id = a.links[0].nodeId;
+
+                    a_ub = (a_id >= half) ? a_id - half : a_id + half;
+
+                    a.links.forEach(link => {
+                        if (a_ub > a_id) {
+                            if (link.siteId > a_id && link.siteId < a_ub) {
+                                ++a_hi;
+                            }
+                            else {
+                                ++a_low;
+                            }
+                        }
+                        else {
+                            if (link.siteId > a_id || link.siteId < a_ub) {
+                                ++a_hi;
+                            }
+                            else {
+                                ++a_low;
+                            }
+                        }
+                    });
+                }
+                if (b.links.length > 0) {
+                    b_id = b.links[0].nodeId;
+
+                    b_ub = (b_id >= half) ? b_id - half : b_id + half;
+
+                    b.links.forEach(link => {
+                        if (b_ub > b_id) {
+                            if (link.siteId > b_id && link.siteId < b_ub) {
+                                ++b_hi;
+                            }
+                            else {
+                                ++b_low;
+                            }
+                        }
+                        else {
+                            if (link.siteId > b_id || link.siteId < b_ub) {
+                                ++b_hi;
+                            }
+                            else {
+                                ++b_low;
+                            }
+                        }
+                    });
+                }
+
+                const b_diff = b_hi - b_low;
+                const a_diff = a_hi - a_low;
+
+                if (a.label === 'dbd' && a.agent.label === 'XRCC1') {
+                    console.log(b.label, b.agent.label)
+                    console.log('\t',[a_hi, a_low], [b_hi, b_low])
+                    console.log('\t',a_id, a_ub, b_ub, half)
+                }
+                if (Math.abs(b_diff) === Math.abs(a_diff)) {
+                    return b_diff;
+                }
+                else if (Math.abs(b_diff) < Math.abs(a_diff)) {
+                    return -a_diff;
+                }
+                return b_diff - a_diff;
+            });
+        });
 
         let arc = this.svg.selectAll('.arc')
             .data(pie(nodes))
@@ -248,7 +383,7 @@ class Render {
             let numSites = site.agent.sites.length;
             let index = site.agent.sites.indexOf(site);
 
-            // interpolate between startangle and endangle
+            // interpolate between startAngle and endAngle
             let angle = site.agent.arc.startAngle + (site.agent.arc.endAngle - site.agent.arc.startAngle) * (index + 2) / (numSites + 3);
             return angle * 180 / Math.PI - 90;
         }
@@ -258,8 +393,8 @@ class Render {
         .enter().append('g')
             .attr('class','site')
             .attr('transform', d => {
-                d.startAngle = getRotation(d);
-                return 'rotate(' + d.startAngle + ')';
+                d.angle = getRotation(d);
+                return 'rotate(' + d.angle + ')';
             });
 
         site.append('line')
@@ -275,10 +410,10 @@ class Render {
 
         site.append('text')
             .text(d => d.label)
-            .attr('x', d => d.startAngle > 90 ? -this.radius : this.radius)
+            .attr('x', d => d.angle > 90 ? -this.radius : this.radius)
             .attr('y', 4)
-            .attr('transform', d => d.startAngle > 90 ? 'rotate(180)' : null)
-            .attr('text-anchor', d => d.startAngle > 90 ? 'end' : 'start');
+            .attr('transform', d => d.angle > 90 ? 'rotate(180)' : null)
+            .attr('text-anchor', d => d.angle > 90 ? 'end' : 'start');
     }
 
     get innerRadius() {
