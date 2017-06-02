@@ -100,7 +100,7 @@ class Render {
         //console.log(layout);
         /* create svg to draw contact maps on */
 
-        this.svg = this.root
+        let container = this.root
             .append('svg')
             .attr('class', 'svg-group')
             .attr('id', 'map-container')
@@ -110,18 +110,14 @@ class Render {
             .attr('height', height +
                             this.layout.margin.top +
                             this.layout.margin.bottom);
-        
-        this.zoom = this.svg.append('g').attr('transform', 'translate(' + width/2 + ',' + height/2 + ')');
-        this.svg = this.zoom.append('g');
 
-        let svg = this.svg;
+        this.svg = container.append('g')
+                .attr('transform', 'translate(' + [width/2, height/2] + ')')
+                .append('g');
 
-        this.zoom.call(d3.zoom().on('zoom', function () { 
-            svg.attr('transform', d3.event.transform); 
-        }));
-        this.zoom.call(d3.drag().on('drag', function() {
-            svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')');
-        }));
+        container.call(d3.zoom().on('zoom', () => this.svg.attr('transform', d3.event.transform)));
+        container.call(d3.drag().on('drag', () => this.svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
+
         this.agentNames = layout.contactMap.data
                               .listNodes()
                               .map(function(node){
@@ -147,14 +143,14 @@ class Render {
         // recalculate radius / dimensions
         let width = this.layout.dimension.width;
         let height = this.layout.dimension.height;
-        let margin = 150;
+        let margin = 120;
         this.radius = Math.min(width, height)/2 - margin;
-        this.arcHeight = this.radius / 3;
+        this.arcHeight = this.radius / 4;
 
         // render chart
         console.log('rendering');
         this.renderDonut();
-        this.renderLinks();
+        // this.renderLinks();
     }
 
     generateLinks() {
@@ -181,12 +177,6 @@ class Render {
     renderLinks() {
         let data = this.layout.contactMap.data;
 
-        // let radius = Math.min(width, height)/2; 
-        // let nodew = radius/6;
-        // let statew = radius/12;
-        // let sitew = radius/8;
-        // let innerRadius = radius - nodew - statew - sitew;
-
         let svg = this.svg;
         let hierarchy = this.hierarchy;
 
@@ -198,15 +188,6 @@ class Render {
             .curve(d3.curveBundle.beta(0.85))
             .radius(function(d) { return d.y; })
             .angle(function(d) { return d.x / 180 * Math.PI; });
-
-        /*var line = d3.radialLine()
-            .curve(d3.curveBundle.beta(0.85))
-            .radius(function(d) { return innerRadius; })
-            .angle(function(d) { return d.getAngle(); });
-            /*
-            .x(function(d) { return d.cartX(innerRadius); })
-            .y(function(d) { return d.cartY(innerRadius); });
-            */
 
         cluster(hierarchy);
 
@@ -220,19 +201,10 @@ class Render {
             .attr('stroke', 'steelblue')
             .attr('stroke-opacity', 0.4);;
 
-        /*let links = svg.selectAll('.links')
-                    .data(this.siteLinks)
-                    .enter().append('path')
-                    .attr('class', 'links')
-                    .attr('d', function(d) {return line([d.target, d.source]); 
-                        })
-                    .attr('stroke', 'steelblue')
-                    .attr('stroke-opacity', 0.4);
-        */
     }
 
     renderDonut() {
-        let c20 = d3.scaleOrdinal(d3.schemeCategory20);
+        let c20 = d3.scaleOrdinal(d3.schemeCategory20c);
                     
         let pie = d3.pie() 
                     .sort(null)
@@ -259,7 +231,6 @@ class Render {
             .attr('transform', function(d) { //set the label's origin to the center of the arc
                 return 'translate(' + arcPath.centroid(d) + ')';
             })
-            .style('font-size', '20px')
             .attr('text-anchor', 'middle')
             .style('fill', 'black')
             .text((d) => {
@@ -272,9 +243,6 @@ class Render {
             d.data.arc = d;
             d.data.svg = el[i];
         })
-
-
-        this.siteList.forEach(site => console.log([site.agent.arc.startAngle, site.agent.arc.endAngle], site.agent.sites.indexOf(site), site.agent.sites.length));
 
         function getRotation(site) {
             let numSites = site.agent.sites.length;
@@ -289,11 +257,15 @@ class Render {
             .data(this.siteList)
         .enter().append('g')
             .attr('class','site')
-            .attr('transform', d => 'rotate(' + getRotation(d) + ')');
+            .attr('transform', d => {
+                d.startAngle = getRotation(d);
+                return 'rotate(' + d.startAngle + ')';
+            });
 
         site.append('line')
             .attr('opacity', 0.5)
-            .attr('stroke','black')
+            .attr('stroke','white')
+            .attr('stroke-dasharray', [2,2])
             .attr('x1', this.innerRadius)
             .attr('x2', this.radius);
 
@@ -301,102 +273,12 @@ class Render {
             .attr('cx', this.innerRadius)
             .attr('r', 1);
 
-        // site.append('circle')
-        //     .attr('transform', d => [d.cartX(this.innerRadius), d.cartY(this.innerRadius)]);
-            // .attr('x', (d, i) => { console.log(d,i); return })
-
-        // console.log('nodes', nodes);
-
-        // console.log('sitelist',this.siteList);
-        // this.siteList.forEach(x => console.log([x.label, x.agent.label]));
-
-        // let gSite = svg.selectAll('.siteArc') 
-        //             .data(site(siteList))
-        //             .enter().append('g');
-        
-        /* draw node arcs paths */
-        
-   //      gSite.append('path')
-   //          .attr('d', siteArc)
-   //          .attr('id', function(d,i) { return 'siteArc_' + i;})
-   //          .style('fill', function(d,i) { return c20(i);});
-
-        
-   //      gSite.append('text')
-   //          .attr('transform', function(d) { //set the label's origin to the center of the arc
-   //              return 'translate(' + siteArc.centroid(d) + ')';
-   //          })
-			// .style('font-size', '20px')
-   //          .attr('text-anchor', 'middle')
-			// //.attr('xlink:href',function(d,i){return '#nodeArc_'+i;})
-   //          .style('fill', 'black')
-   //           //place the text halfway on the arc
-   //          .text(function(d) { 
-   //              let label = d.data.label;
-   //              d.data.startAngle = d.startAngle;
-   //              d.data.endAngle = d.endAngle;
-   //              label = label.length > 10 ? label.substring(0,8): label;
-   //              return label; });
-
-   //      //console.log(data);
-   //      //console.log(siteList);
-
-   //      /* draws red dot at center of arc, for debugging purposes */
-   //      gSite
-   //          .data(siteList)
-   //          .append('circle')
-   //          .attr('cx', function(d) {
-   //              return d.cartX(innerRadius);
-   //          })
-   //          .attr('cy', function(d) {
-   //              return d.cartY(innerRadius);
-   //          })
-   //          .attr('r', '5px')
-   //          .attr('fill', 'red');
-
-   //       for (let sites in this.siteList) {
-   //          let site = this.siteList[sites];
-   //          console.log(site.getStates());
-
-   //          let state = d3.pie()
-   //                  .sort(null)
-   //                  .value(function(d) {
-   //                      return 1;
-   //                  })
-   //                  .startAngle(site.startAngle)
-   //                  .endAngle(site.endAngle)
-   //                  .padAngle(0.01);
-
-   //          let stateArc = d3.arc()
-   //              .outerRadius(radius - nodew)
-   //              .innerRadius(radius - nodew - statew + paddingw);
-   //          /* draw state arc paths */
-   //          let gState = svg.selectAll('.stateArc')
-   //                  .data(state(site.getStates()))
-   //                  .enter().append('g');
-
-   //          gState.append('path')
-   //          .attr('d', stateArc)
-   //          .attr('id', function(d,i) { return 'stateArc_' + site.label + '_' + i;})
-   //          .style('fill', function(d,i) { return c20(i);});
-
-   //          gState.append('text')
-   //          .attr('transform', function(d) { //set the label's origin to the center of the arc
-   //              return 'translate(' + stateArc.centroid(d) + ')';
-   //          })
-			// .style('font-size', '20px')
-   //          .attr('text-anchor', 'middle')
-			// //.attr('xlink:href',function(d,i){return '#nodeArc_'+i;})
-   //          .style('fill', 'black')
-   //           //place the text halfway on the arc
-   //          .text(function(d) { 
-   //              let label = d.data.name;
-   //              label = label.length > 10 ? label.substring(0,8): label;
-   //              return label; });
-
-
-   //      }
-
+        site.append('text')
+            .text(d => d.label)
+            .attr('x', d => d.startAngle > 90 ? -this.radius : this.radius)
+            .attr('y', 4)
+            .attr('transform', d => d.startAngle > 90 ? 'rotate(180)' : null)
+            .attr('text-anchor', d => d.startAngle > 90 ? 'end' : 'start');
     }
 
     get innerRadius() {

@@ -2,6 +2,7 @@ body {
   margin:0;
   -moz-osx-font-smoothing:grayscale;
   -webkit-font-smoothing:antialiased;
+  font-family:helvetica, arial, sans-serif;
 }
 
 .link {
@@ -11,20 +12,15 @@ body {
   pointer-events: none;
 }
 
-.node { cursor: pointer; }
-#graph {
-    transition:transform 200ms ease;
-    transform:translateX(100%);
-    width:33%;
-    height:100%;
-    background:#fafaea;
-    position:fixed;
-    top:0;
-    right:0;
+.arc text {
+  pointer-events:none;
+  font-size:11px;
+  font-weight: bold;
 }
 
-.monthText {
-			fill: #6B6B6B;
-			font-size: 13px;
-			font-family: 'Courgette', sans-serif;
-		}
+.site text {
+  font-size: 12px;
+}
+
+#drawing text {
+}
