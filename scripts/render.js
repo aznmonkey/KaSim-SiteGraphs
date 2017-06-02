@@ -64,6 +64,8 @@ class ContactMap {
         parser.readJson(json).then( function(response) {
             //console.log(response);
             map.data = response;
+            map.data.sortNodes();
+            map.data.sortSites();
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
             let w = window.innerWidth - margin.left - margin.right;

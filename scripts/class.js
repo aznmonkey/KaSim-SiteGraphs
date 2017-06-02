@@ -65,7 +65,7 @@ class Site extends D3Object {
         this.startAngle = 0;
         this.endAngle = 0;
     }
-    
+
     setId(id) {
         this.id = id;
     }
@@ -112,10 +112,33 @@ class Node extends D3Object {
             site.setId(i); 
             return site;
         });
+        
     }
     
     setId(id) {
         this.id = id;
+    }
+
+    generateIdMap() {
+        this.idHashMap = {};
+        /* generate id hashmap */
+        let node = this;
+        this.sites.forEach(function(site) {
+                console.log(node.idHashMap);
+                node.idHashMap[site.id] = site;           
+        });
+    }
+
+    sortSites() {
+        this.generateIdMap();
+        this.sites.sort(function(a,b) {
+            if (a.label > b.label)
+                return 1;
+            else if (a.label < b.label)
+                return -1;
+            else 
+                return 0;
+        });
     }
 
     listSites() {
@@ -123,7 +146,10 @@ class Node extends D3Object {
     }
 
     getSite(siteId) {
-        return this.listSites()[siteId];
+        if (this.idHashMap !== undefined)
+            {return this.idHashMap[siteId];}
+        return this.sites[siteId];
+        
     }
 
 }
@@ -162,6 +188,8 @@ class DataStorage {
     }
 
     getNode(id) {
+        if (this.idHashMap !== undefined)
+            {return this.idHashMap[id];}
         return this.data[id];
     }
 
@@ -173,17 +201,27 @@ class DataStorage {
         return this.getNode(node).getSite(s);
     }
 
-    // layout of sites
-    siteDistance(site, point) {
-        let distances = site.listLinks().map(function(link) {
-            let nodeLocation = this.getNode(link.nodeId).absolute;
-            return nodeLocation.distance(point);
+    generateIdMap() {
+        this.idHashMap = {};
+        /* generate id hashmap */
+        let nodes = this;
+        this.data.forEach(function(node) {
+                nodes.idHashMap[node.id] = node;           
         });
-        let result = distances.reduce(function(a,b){ 
-            return a + b; }, 0);
-        return result;
     }
 
+    sortNodes() {
+        this.generateIdMap();
+        this.data.sort(function(a,b) {
+            if (a.label > b.label)
+                return 1;
+            else if (a.label < b.label)
+                return -1;
+            else 
+                return 0;
+        });
+    }
+    
     constructHierarchy() {
         let siteList = [];
         let data = this.data;
@@ -234,6 +272,10 @@ class DataStorage {
         });
 
         return d3.hierarchy(map[""]);
+    }
+
+    sortSites() {
+        this.listNodes().map(function(node) {node.sortSites();});
     }
 
     packageLinks(nodes) {
