@@ -90,10 +90,27 @@ class Site extends D3Object {
         return this.states;
     }
 
+    generateTreeObj() {
+        let treeObj = {};
+        treeObj.name = this.label;
+        console.log(this.states);
+        let childArray = [];
+        if(this.states !== undefined) {
+            for (let state in this.states) {
+                let childObj = {};
+                childObj.name = this.states[state].name;
+                childObj.children = [];
+                childArray.push(childObj);
+            }
+        }
+        treeObj.children = childArray;
+        return treeObj;
+    }
+
     getAngle() {
         return (this.startAngle + this.endAngle)/2 +3 * Math.PI/2;
     }
-    
+
     cartX (r) {
         //console.log(this.startAngle);
         return r * Math.cos(((this.startAngle + this.endAngle)/2 + 3 * Math.PI/2));
@@ -125,7 +142,7 @@ class Node extends D3Object {
         /* generate id hashmap */
         let node = this;
         this.sites.forEach(function(site) {
-                console.log(node.idHashMap);
+                //console.log(node.idHashMap);
                 node.idHashMap[site.id] = site;           
         });
     }
