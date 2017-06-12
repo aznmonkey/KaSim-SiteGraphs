@@ -10,44 +10,6 @@ class Layout {
             bottom: 10, left: 10 };
         
     }
-    /*    
-    circleNodes(){
-        let w = this.dimension.width;
-        let h = this.dimension.height;
-        let nodes = contactMap.data.listNodes();
-    
-        console.log(this.dimension);
-        nodes.forEach(function(node,index,nodes){
-            let dx = 0;
-            let dy = 0;
-            let length = nodes.length;
-
-            if(length > 1){
-                let angle = 2*index*Math.PI/length;
-                dx = w * Math.cos(angle)/4;
-                dy = h * Math.sin(angle)/3;
-                console.log("x:" + dx + " y:" + dy);
-            }
-            nodes[index].absolute = new Point(dx + w/2,
-                                              dy + h/2);
-
-            //set static node dimensions for now
-            nodes[index].dimension = new Dimension(50,50);
-    
-      });
-    }
-
- 
-
-    setNodeDimensions(node,dimensions){
-        console.log(dimensions);
-        node.contentDimension = new Dimension(dimensions.width, dimensions.height);
-    }
-
-    setSiteDimension(site,dimensions){
-        site.contentDimension = dimensions.clone();
-    }
-*/
 }
 
 
@@ -145,16 +107,15 @@ class Render {
     }
 
     render() {
-        let width = this.layout.dimension.width;
-        let height = this.layout.dimension.height;
-        
-        let radius = Math.min(width, height)/2;
+        this.width = this.layout.dimension.width;
+        this.height = this.layout.dimension.height;
+        this.radius = Math.min(this.width, this.height)/2;
         this.paddingw = 0; 
-        this.nodew = radius/6;
-        this.statew = radius/12;
-        this.sitew = radius/8;
-        this.outerRadius = radius - this.nodew - this.statew;
-        this.innerRadius = radius - this.nodew - this.statew - this.sitew;
+        this.nodew = this.radius/6;
+        this.statew = this.radius/12;
+        this.sitew = this.radius/8;
+        this.outerRadius = this.radius - this.nodew - this.statew;
+        this.innerRadius = this.radius - this.nodew - this.statew - this.sitew;
         //console.log("rendering");
         this.renderDonut();
         this.renderLinks();
@@ -214,6 +175,7 @@ class Render {
             .attr("class", "link")
             .attr("d", line)
             .attr("stroke", "steelblue")
+            .attr("stroke-width", 1.5)
             .attr("stroke-opacity", 0.4);
 
     }
@@ -228,11 +190,114 @@ class Render {
 
         siteLine.append('line')
             .attr('opacity', 0.5)
-            .attr('stroke','white')
+            .attr('stroke', function(d) { return d.agent.color; })
             .attr('stroke-dasharray', [2,2])
             .attr('stroke-width', 2)
             .attr('x1', this.innerRadius + circleRadius)
             .attr('x2', this.outerRadius - circleRadius);
+    }
+
+    renderStates(site) {
+        let lineLength = this.radius/4;   
+        let width = this.width;
+        let height = this.height;
+        let outerRadius = this.outerRadius;
+        let states = site.states;
+
+        if (states.length < 1) {
+            return;
+        }
+        if (site.clicked || site.hover) {
+            if ((site.clicked && site.hover)) {
+                console.log("click and hover");
+                return;
+            }    
+            if(!site.hover && site.clicked)
+            {
+                console.log("unhover while clicked");
+                return;
+            } 
+            if(site.hover && !site.clicked) {
+                console.log("hover while not clicked");
+                console.log(site.label);
+                this.svg.selectAll('.stateLink')
+                    .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).remove().transition();
+            }
+            let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.6;
+            let gState = this.svg.selectAll('.stateLink')
+                .data(this.siteList);
+
+            let stateLine = gState.enter().append('g') 
+                .merge(gState)
+                .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} )    
+                .attr('class','stateLink');
+                
+            console.log("click or hover");
+            console.log(site.label);
+            stateLine.append('line')
+                .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
+                .attr('opacity', 0.5)
+                .attr('stroke','black')
+                .attr('stroke-width', 2)
+                .attr('x1', this.outerRadius + textLength)
+                .attr('x2', this.outerRadius + textLength + (lineLength - textLength))
+                .transition();
+
+            let stateArc = d3.arc()
+                    .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
+                    .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
+                    .startAngle(function(d) { return d.startAngle; 
+                    })
+                    .endAngle(function(d) { return d.endAngle;
+                    })
+                    .padAngle(Math.PI/200);
+    
+            
+            stateLine.append('path')
+                .attr("d", stateArc)
+                .style("fill", "black");
+
+            
+            
+            for ( let state in site.states ) {
+                if (state) {
+                    stateLine.append("text")
+                        .attr("text-anchor", function (d) {
+                            if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
+                                return  "start"; }
+                            else 
+                                return "end"; })
+                        .attr("class", "stateText")
+                        .attr('alignment-baseline', "middle")
+                        .style("fill", "black")
+                        .style('font-size', '100%')
+                        .attr("transform", function(d) {
+                            let r = (outerRadius + textLength + (lineLength - textLength) + 10);
+                            
+                            let offset = (d.endAngle - d.startAngle)/site.states.length;
+
+                            let angle = d.startAngle + 3/2 * Math.PI + state * offset;
+                            let newX = r * Math.cos(angle) ;
+                            let newY = r * Math.sin(angle) ;
+                            if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
+                                angle += Math.PI;
+                            } 
+                            console.log(newX, newY);
+                            return "translate(" + newX + "," + newY + ") rotate(" + angle * 180/Math.PI + ")";
+                        })
+                        .text(site.states[state].name);
+                }
+            }
+        } 
+        
+        else {
+            console.log("mouseout");
+            let selection = this.svg.selectAll(".stateLink")
+                .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).remove().transition();
+            console.log(selection);
+        }
+        
+ 
     }
 
     calculateTextWidth(size) {
@@ -249,6 +314,8 @@ class Render {
     }
 
     renderDonut() {
+        let nodeRadius = 5;
+        let siteFont = "1.2em";
         let siteList = this.siteList;
         let layout = this.layout;
         let width = layout.dimension.width;
@@ -260,7 +327,7 @@ class Render {
         let sitew = radius/8;
         let outerRadius = radius - nodew - statew;
         let innerRadius = radius - nodew - statew - sitew;
-        let paddingSite = this.calculateTextWidth(20) * 2;
+        let paddingSite = this.calculateTextWidth("150%") * 2;
         let renderer = this;
 
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
@@ -277,8 +344,8 @@ class Render {
                     .innerRadius((outerRadius + innerRadius) / 2);
         
         let siteArc = d3.arc()
-                    .outerRadius(outerRadius)
-                    .innerRadius(outerRadius + paddingSite);
+                    .outerRadius(outerRadius + paddingSite)
+                    .innerRadius(outerRadius );
                     
 
         let node = d3.pie() 
@@ -294,6 +361,7 @@ class Render {
                         return 1;
                     });
     
+        
         
         let data = this.layout.contactMap.data;
 
@@ -313,7 +381,7 @@ class Render {
             //.attr("id", function(d,i) { return "nodeArc_" + i;})
             .style("fill", function(d,i) { 
                 d.data.color = d3.rgb(c20(i)).darker(1);
-                return c20(i);});
+                return d3.rgb(c20(i)).brighter(0.5);});
 
         
         /* render invisible text arc path */
@@ -339,10 +407,8 @@ class Render {
                     return "25%";
             })
             .style("text-anchor", "middle")
-			.style('font-size', '20px')
-            
-            //.attr('text-anchor', 'middle')
-            .style("fill", "black")
+			.style('font-size', "medium")
+            .style("fill", function(d,i) { return d.data.color.darker(2);})
             .text(function(d) { 
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
@@ -357,6 +423,7 @@ class Render {
                     return  "start"; }
                 else 
                     return "end"; })
+            .attr("class", "siteText")
             .attr('alignment-baseline', "middle")
             .attr("transform", function(d) {
                 let xy = siteArc.centroid(d) ;
@@ -369,7 +436,7 @@ class Render {
                 //console.log("angle: " + angle + " label: " + d.data.label );
                 return "translate(" + xy + ") rotate(" + angle * 180/Math.PI + ")";
             })
-			.style('font-size', 20)
+			.style('font-size', "medium")
             //.attr('text-anchor', 'middle')
 			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
             .style("fill", function(d, i) { return d.data.agent.color; })
@@ -393,7 +460,7 @@ class Render {
             .attr('cy', function(d) {
                 return d.cartY(innerRadius);
             })
-            .attr('r', 5)
+            .attr('r', nodeRadius)
             .attr("fill", function(d) {
                 //console.log(d); 
                 return d.agent.color; 
@@ -408,7 +475,7 @@ class Render {
             .attr('cy', function(d) {
                 return d.cartY(outerRadius);
             })
-            .attr('r', 5)
+            .attr('r', nodeRadius)
             .attr("stroke", function(d) { 
                 return d.agent.color; 
             })
@@ -417,8 +484,9 @@ class Render {
                 return d.agent.color; 
 
             })
-            .on("click", click);
-
+            .on("click", click)
+            .on("mouseover", mouseover)
+            .on("mouseout", mouseout);
             
             /*
             let site = this.siteList[sites];
@@ -461,40 +529,75 @@ class Render {
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
         */
+
+        function mouseover (d) {
+            let site = d;   
+            site.hover += 1;       
+            if (site.hover === 1) {
+                renderer.renderStates(site);
+            }
+            d3.select(this).style("fill", function() {                
+                return d.currentColor;
+            }).attr("r", nodeRadius * 2.5);
+            let siteText = d3.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
+            let transform = getTransform(siteText);
+        
+            siteText
+                .style("font-weight", "bold")
+                .style("font-size", "150%" )
+                .attr("transform", function(d) {    let angle = d.data.getAngle();
+                                                        let newX = (parseFloat(transform.translate[0]) + 1.25 * nodeRadius  * Math.cos(angle));
+                                                        let newY = (parseFloat(transform.translate[1]) + 1.25 * nodeRadius  * Math.sin(angle));
+                                                        return "translate(" +  newX +
+                                                        ","  + newY +
+                                                        ") rotate(" + transform.rotate + ")" ;
+                                                    }); 
+        }
+
+        function mouseout (d) {
+            let site = d;
+            site.hover = 0;            
+            renderer.renderStates(site);
+            d3.select(this).style("fill", function() {    
+                return d.currentColor;
+            }).attr("r", nodeRadius); 
+            let siteText = d3.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
+            let transform = getTransform(siteText);
+            
+            siteText
+                .style("font-weight", "normal")
+                .style("font-size", "100%")
+                .attr("transform", function(d) {    if (!d.clicked) {
+                                                            let angle = d.data.getAngle();
+                                                            let newX = (parseFloat(transform.translate[0]) - 1.25 * nodeRadius  * Math.cos(angle));
+                                                            let newY = (parseFloat(transform.translate[1]) - 1.25 * nodeRadius  * Math.sin(angle));
+                                                            return "translate(" +  newX +
+                                                            ","  + newY +
+                                                            ") rotate(" + transform.rotate + ")" ;
+                                                        }
+                                                        
+                                                    });     
+            }
+
         function click (d) {
             let originalColor = d.agent.color;
-            let data = site;
-            /* render states */
-            /*let root = d3.hierarchy(d.generateTreeObj());
-            
-            let treeData = treemap(root);
-            let nodes = treeData.descendants(),
-                links = treeData.descendants().slice(1);
-            
-            let link = svg.selectAll(".state_link")
-                .data(links)
-                .enter().append("path")
-                .attr("class", "state_link")
-                .attr("d", function(d) {
-                    console.log(d);
-                    return "M" + d.y + "," + d.x
-                        + "C" + (d.parent.y + 100) + "," + d.x
-                        + " " + (d.parent.y + 100) + "," + d.parent.x
-                        + " " + d.parent.y + "," + d.parent.x;
-                });
-            */
-            console.log(d);
-            let link = svg.selectAll(".stateLink")
-                .data(d)
-                .enter().append("path")
-                .attr("class", "stateLink");
-            d3.select(this).style("fill", function() {
-                if (site.currentColor == originalColor) 
+            let site = d;
+            if (site.currentColor === originalColor) {
+                    site.clicked += 1;
                     site.currentColor = "white";
-                else
-                    site.currentColor = originalColor;
+                    if(site.clicked === 1) {
+                        renderer.renderStates(site);
+                    }
+            }
+            else {
+                site.clicked = 0;
+                site.currentColor = originalColor;
+                renderer.renderStates(site);
+            }
+            d3.select(this).style("fill", function() {    
                 return site.currentColor;
             } );
+            
         }
 
     }
