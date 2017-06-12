@@ -197,13 +197,86 @@ class Render {
             .attr('x2', this.outerRadius - circleRadius);
     }
 
-    renderStates(site) {
+    renderStates(gSite) {
         let lineLength = this.radius/4;   
         let width = this.width;
         let height = this.height;
         let outerRadius = this.outerRadius;
-        let states = site.states;
+        for (let sIndex in this.siteList) {
+            let site = this.siteList[sIndex];
+            let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.2;
+                let gState = this.svg.selectAll('.stateLink')
+                    .data(this.siteList);
 
+                let stateLine = gState.enter() 
+                    .merge(gState)
+                    .filter( function(d) { return d.label === site.label && d.agent.label === site.agent.label ;} )   
+                    .append('g') 
+                    .attr('class','stateLink')
+                    .attr('id', function(d) { return "stateLink" + d.agent.id + d.id; })
+                    .attr('opacity', 0);
+                
+                if (site.states.length > 0) { 
+                    stateLine.append('line')
+                        .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
+                        .attr('opacity', 0.5)
+                        .attr('stroke','black')
+                        .attr('stroke-width', 2)
+                        .attr('x1', this.outerRadius + textLength)
+                        .attr('x2', this.outerRadius + textLength + (lineLength - textLength))
+                        .transition();
+
+                    let stateArc = d3.arc()
+                            .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
+                            .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
+                            .startAngle(function(d) { return d.startAngle; 
+                            })
+                            .endAngle(function(d) { return d.endAngle;
+                            })
+                            .padAngle(Math.PI/200);
+            
+                    
+                    stateLine.append('path')
+                        .attr("d", stateArc)
+                        .style("fill", "black");
+
+                    
+                    
+                    for ( let state in site.states ) {
+                        if (state) {
+                            stateLine.append("text")
+                                .attr("text-anchor", function (d) {
+                                    if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
+                                        return  "start"; }
+                                    else 
+                                        return "end"; })
+                                .attr("class", "stateText")
+                                .attr('alignment-baseline', "middle")
+                                .style("fill", "black")
+                                .style('font-size', '100%')
+                                .attr("transform", function(d) {
+                                    let r = (outerRadius + textLength + (lineLength - textLength) + 10);
+                                    
+                                    let offset = (d.endAngle - d.startAngle)/site.states.length;
+
+                                    let angle = d.startAngle + 3/2 * Math.PI + state * offset;
+                                    let newX = r * Math.cos(angle) ;
+                                    let newY = r * Math.sin(angle) ;
+                                    if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
+                                        angle += Math.PI;
+                                    } 
+                                    //console.log(newX, newY);
+                                    return "translate(" + newX + "," + newY + ") rotate(" + angle * 180/Math.PI + ")";
+                                })
+                                .text(site.states[state].name);
+                        }
+                    
+                }
+            }
+        }
+
+        /*let states = site.states;
+        /*
         if (states.length < 1) {
             return;
         }
@@ -303,9 +376,11 @@ class Render {
             console.log("mouseout");
             console.log(site);
             let selection = this.svg.selectAll(".stateLink")
-                .filter( function(d) {console.log(d); return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 0);
+
+            selection.filter( function(d) {console.log(d); return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 0);
             console.log(selection);
         }
+        */
         
  
     }
@@ -325,7 +400,7 @@ class Render {
 
     renderDonut() {
         let nodeRadius = 5;
-        let siteFont = "1.2em";
+        let siteFont = "100%";
         let siteList = this.siteList;
         let layout = this.layout;
         let width = layout.dimension.width;
@@ -539,19 +614,19 @@ class Render {
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
         */
+        this.renderStates(gSite);
 
         function mouseover (d) {
             let site = d;   
-            site.hover += 1;       
-            if (site.hover === 1) {
-                renderer.renderStates(site);
-            }
+            site.hover += 1;   
             d3.select(this).style("fill", function() {                
                 return d.currentColor;
             }).attr("r", nodeRadius * 2.5);
-            let siteText = d3.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
+            
+            let siteText = svg.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
             let transform = getTransform(siteText);
-        
+            
+            
             siteText
                 .style("font-weight", "bold")
                 .style("font-size", "150%" )
@@ -562,12 +637,22 @@ class Render {
                                                         ","  + newY +
                                                         ") rotate(" + transform.rotate + ")" ;
                                                     }); 
+
+            if (site.hover === 1) {
+                let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
+                let siteLength = siteText.node().getComputedTextLength() * 1.2 + radius/30;
+                stateLine.selectAll("line")
+                    .attr("x1", function() {return outerRadius + siteLength;} );
+                stateLine.attr("opacity", 1);
+            }
+             
+            
         }
 
         function mouseout (d) {
             let site = d;
             site.hover = 0;            
-            renderer.renderStates(site);
+            //renderer.renderStates(site);
             d3.select(this).style("fill", function() {    
                 return d.currentColor;
             }).attr("r", nodeRadius); 
@@ -586,8 +671,16 @@ class Render {
                                                             ") rotate(" + transform.rotate + ")" ;
                                                         }
                                                         
-                                                    });     
+                                                    });    
+            let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
+            let siteLength = siteText.node().getComputedTextLength() * 1.2 + radius/30;
+            stateLine.selectAll("line")
+                .attr("x1", function() {return outerRadius + siteLength;} )
+            if (!d.clicked) {
+                 stateLine.attr('opacity', 0);   
             }
+             
+        }
 
         function click (d) {
             let originalColor = d.agent.color;
@@ -596,13 +689,17 @@ class Render {
                     site.clicked += 1;
                     site.currentColor = "white";
                     if(site.clicked === 1) {
-                        renderer.renderStates(site);
+                        let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
+                        stateLine.selectAll("line")
+                            .attr('opacity', 1);
                     }
             }
             else {
                 site.clicked = 0;
                 site.currentColor = originalColor;
-                renderer.renderStates(site);
+                let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
+                        stateLine.selectAll("line")
+                            .attr('opacity', 0);
             }
             console.log("click", site.clicked);
             d3.select(this).style("fill", function() {    

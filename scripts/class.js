@@ -58,7 +58,6 @@ class Site extends D3Object {
         this.endAngle = 0;
         this.clicked = 0;
         this.hover = 0;
-        this.rendered = 0;
     }
 
     setId(id) {
