@@ -210,90 +210,100 @@ class Render {
         if (site.clicked || site.hover) {
             if ((site.clicked && site.hover)) {
                 console.log("click and hover");
+                this.svg.selectAll('.stateLink')
+                    .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 1);
                 return;
             }    
             if(!site.hover && site.clicked)
             {
                 console.log("unhover while clicked");
+                this.svg.selectAll('.stateLink')
+                    .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 1);
                 return;
             } 
-            if(site.hover && !site.clicked) {
-                console.log("hover while not clicked");
-                console.log(site.label);
-                this.svg.selectAll('.stateLink')
-                    .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).remove().transition();
-            }
-            let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.6;
-            let gState = this.svg.selectAll('.stateLink')
-                .data(this.siteList);
 
-            let stateLine = gState.enter().append('g') 
-                .merge(gState)
-                .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} )    
-                .attr('class','stateLink');
-                
-            console.log("click or hover");
-            console.log(site.label);
-            stateLine.append('line')
-                .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
-                .attr('opacity', 0.5)
-                .attr('stroke','black')
-                .attr('stroke-width', 2)
-                .attr('x1', this.outerRadius + textLength)
-                .attr('x2', this.outerRadius + textLength + (lineLength - textLength))
-                .transition();
+            if(!site.rendered) {
+                let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.6;
+                let gState = this.svg.selectAll('.stateLink')
+                    .data(this.siteList);
 
-            let stateArc = d3.arc()
-                    .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
-                    .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
-                    .startAngle(function(d) { return d.startAngle; 
-                    })
-                    .endAngle(function(d) { return d.endAngle;
-                    })
-                    .padAngle(Math.PI/200);
-    
-            
-            stateLine.append('path')
-                .attr("d", stateArc)
-                .style("fill", "black");
+                let stateLine = gState.enter() 
+                    .merge(gState)
+                    .filter( function(d) { return d.label === site.label && d.agent.label === site.agent.label ;} )   
+                    .append('g') 
+                    .attr('class','stateLink');
+                    
+                console.log("click or hover");
+                //console.log(site.label);
+                stateLine.append('line')
+                    .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
+                    .attr('opacity', 0.5)
+                    .attr('stroke','black')
+                    .attr('stroke-width', 2)
+                    .attr('x1', this.outerRadius + textLength)
+                    .attr('x2', this.outerRadius + textLength + (lineLength - textLength))
+                    .transition();
 
-            
-            
-            for ( let state in site.states ) {
-                if (state) {
-                    stateLine.append("text")
-                        .attr("text-anchor", function (d) {
-                            if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
-                                return  "start"; }
-                            else 
-                                return "end"; })
-                        .attr("class", "stateText")
-                        .attr('alignment-baseline', "middle")
-                        .style("fill", "black")
-                        .style('font-size', '100%')
-                        .attr("transform", function(d) {
-                            let r = (outerRadius + textLength + (lineLength - textLength) + 10);
-                            
-                            let offset = (d.endAngle - d.startAngle)/site.states.length;
-
-                            let angle = d.startAngle + 3/2 * Math.PI + state * offset;
-                            let newX = r * Math.cos(angle) ;
-                            let newY = r * Math.sin(angle) ;
-                            if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
-                                angle += Math.PI;
-                            } 
-                            console.log(newX, newY);
-                            return "translate(" + newX + "," + newY + ") rotate(" + angle * 180/Math.PI + ")";
+                let stateArc = d3.arc()
+                        .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
+                        .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
+                        .startAngle(function(d) { return d.startAngle; 
                         })
-                        .text(site.states[state].name);
+                        .endAngle(function(d) { return d.endAngle;
+                        })
+                        .padAngle(Math.PI/200);
+        
+                
+                stateLine.append('path')
+                    .attr("d", stateArc)
+                    .style("fill", "black");
+
+                
+                
+                for ( let state in site.states ) {
+                    if (state) {
+                        stateLine.append("text")
+                            .attr("text-anchor", function (d) {
+                                if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
+                                    return  "start"; }
+                                else 
+                                    return "end"; })
+                            .attr("class", "stateText")
+                            .attr('alignment-baseline', "middle")
+                            .style("fill", "black")
+                            .style('font-size', '100%')
+                            .attr("transform", function(d) {
+                                let r = (outerRadius + textLength + (lineLength - textLength) + 10);
+                                
+                                let offset = (d.endAngle - d.startAngle)/site.states.length;
+
+                                let angle = d.startAngle + 3/2 * Math.PI + state * offset;
+                                let newX = r * Math.cos(angle) ;
+                                let newY = r * Math.sin(angle) ;
+                                if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
+                                    angle += Math.PI;
+                                } 
+                                //console.log(newX, newY);
+                                return "translate(" + newX + "," + newY + ") rotate(" + angle * 180/Math.PI + ")";
+                            })
+                            .text(site.states[state].name);
+                    }
+                }
+                site.rendered = 1;
+            }
+            else {
+                if (site.hover) {
+                    this.svg.selectAll('.stateLink')
+                        .filter( function(d) { return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 1);
                 }
             }
         } 
         
         else {
             console.log("mouseout");
+            console.log(site);
             let selection = this.svg.selectAll(".stateLink")
-                .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).remove().transition();
+                .filter( function(d) {console.log(d); return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 0);
             console.log(selection);
         }
         
@@ -594,6 +604,7 @@ class Render {
                 site.currentColor = originalColor;
                 renderer.renderStates(site);
             }
+            console.log("click", site.clicked);
             d3.select(this).style("fill", function() {    
                 return site.currentColor;
             } );

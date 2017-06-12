@@ -58,6 +58,7 @@ class Site extends D3Object {
         this.endAngle = 0;
         this.clicked = 0;
         this.hover = 0;
+        this.rendered = 0;
     }
 
     setId(id) {
@@ -167,9 +168,9 @@ class Node extends D3Object {
 }
 
 class State {
-    constructor(name, state) {
+    constructor(name, site) {
         this.name = name;
-        this.state = state;
+        this.site = site;
     }
 
 }
