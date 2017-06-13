@@ -93,8 +93,6 @@ class Render {
         
         this.hierarchy = data.constructHierarchy();
 
-        //console.log(this.hierarchy);
-        // console.log(data);
         for (let key in data.listNodes()) { 
             let sites = data.listNodes()[key].listSites();
             for (let key in sites) {
@@ -170,7 +168,7 @@ class Render {
         cluster(hierarchy);
 
         //console.log(data.packageLinks(hierarchy.leaves()));
-        let links = svg.selectAll('.links')
+        let links = svg.selectAll('.link')
             .data(data.packageLinks(hierarchy.leaves()))
             .enter().append("path")
             .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
@@ -277,13 +275,11 @@ class Render {
                                     
                                     let offset = (d.endAngle - d.startAngle)/(site.states.length + 1);
                                     let angle = d.startAngle + 3/2 * Math.PI + (state) * offset + offset;
-                                    console.log(angle);
                                     let newX = r * Math.cos(angle) ;
                                     let newY = r * Math.sin(angle) ;
                                     if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
                                         angle += Math.PI;
                                     } 
-                                    //console.log(newX, newY);
                                     return "translate(" + newX + "," + newY + ") rotate(" + angle * 180/Math.PI + ")";
                                 })
                                 .text(site.states[state].name);
@@ -294,19 +290,6 @@ class Render {
             }        
         
         }
-
-    calculateTextWidth(size) {
-        let svg = d3.select("svg");
-        let text = svg.append("text")
-	        .attr("x", 10)
-	        .attr("y", 30)
-            .style('font-size', size)
-	        .text("a");
-        let tWidth = svg.select("text").node().getComputedTextLength();
-        text.remove();
-        return tWidth;
-
-    }
 
     renderDonut() {
         let nodeRadius = this.nodeRadius;
@@ -321,7 +304,7 @@ class Render {
         let sitew = radius/8;
         let outerRadius = radius - nodew - statew;
         let innerRadius = radius - nodew - statew - sitew;
-        let paddingSite = this.calculateTextWidth("150%") * 2;
+        let paddingSite = calculateTextWidth("150%") * 2;
         let renderer = this;
 
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
@@ -331,7 +314,7 @@ class Render {
         let nodeArc = d3.arc()
                     .outerRadius(outerRadius)
                     .innerRadius(innerRadius)
-                    .padAngle(Math.PI/renderer.siteList.length/4);
+                    .padAngle(Math.PI/(renderer.siteList.length * 4));
         
         let nodeTextArc = d3.arc()
                     .outerRadius((outerRadius + innerRadius) / 2)
@@ -375,8 +358,9 @@ class Render {
             //.attr("id", function(d,i) { return "nodeArc_" + i;})
             .style("fill", function(d,i) { 
                 d.data.color = d3.rgb(c20(i)).darker(1);
-                return d3.rgb(c20(i)).brighter(0.5);});
-
+                return d3.rgb(c20(i)).brighter(0.5);})
+            .on("mouseover", mouseoverNode)
+            .on("mouseout", mouseoutNode);
         
         /* render invisible text arc path */
         gNode.append("path")
@@ -401,7 +385,7 @@ class Render {
                     return "25%";
             })
             .style("text-anchor", "middle")
-			.style('font-size', "medium")
+			.style('font-size', "110%")
             .style("fill", function(d,i) { return d.data.color.darker(2);})
             .text(function(d) { 
                 let label = d.data.label;
@@ -430,7 +414,7 @@ class Render {
                 //console.log("angle: " + angle + " label: " + d.data.label );
                 return "translate(" + xy + ") rotate(" + angle * 180/Math.PI + ")";
             })
-			.style('font-size', "medium")
+			.style('font-size', "110%")
             //.attr('text-anchor', 'middle')
 			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
             .style("fill", function(d, i) { return d.data.agent.color; })
@@ -482,9 +466,69 @@ class Render {
             .on("mouseover", mouseoverSite)
             .on("mouseout", mouseoutSite);
             
+        
+        function mouseoverNode(d) {
+            let node = d;
+            let sites = node.data.listSites();
+            let targetSites = [];
+            d3.select(this)
+                .style("stroke-width", 5)
+                .style("stroke", function() {return node.data.color.darker(1);});
+            let links = svg.selectAll(".link").filter(function(d) { 
+                let site = {};
+                if(d.target.data.parentId === node.data.id || d.source.data.parentId === node.data.id) {
+                    site.id = d.target.data.id ;
+                    site.parentId = d.target.data.parentId;
+                    targetSites.push(site);
+                }
+                return d.target.data.parentId === node.data.id || d.source.data.parentId === node.data.id;
+                
+            });  
+            targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
+            console.log(targetSites);
+            let targetTexts = svg.selectAll(".siteText").filter(function(d) {console.log(d); return _.some(targetSites, d.data);});
+            targetTexts
+                .style("font-weight", "bold")
+                .style("font-size", "150%");
+            links
+                .style("stroke", node.data.color)
+                .style("stroke-width", 8)
+                .attr("stroke-opacity", 0.8);          
+        }
+
+        function mouseoutNode(d) {
+            let node = d;   
+            let sites = node.data.listSites();
+            let targetSites = []; 
+            d3.select(this)
+                .style("stroke-width", 0)
+                .style("stroke", function() {return node.data.color;});  
+
+            
+            let links = svg.selectAll(".link").filter(function(d) { 
+                let site = {};
+                if(d.target.data.parentId === node.data.id || d.source.data.parentId === node.data.id) {
+                    site.id = d.target.data.id ;
+                    site.parentId = d.target.data.parentId;
+                    targetSites.push(site);
+                }
+                return d.target.data.parentId === node.data.id || d.source.data.parentId === node.data.id;
+                
+            });  
+            targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
+            let targetTexts = svg.selectAll(".siteText").filter(function(d) { return _.some(targetSites, d.data);});
+            targetTexts
+                .style("font-weight", "normal")
+                .style("font-size", "110%");
+            links
+                .style("stroke", "steelblue")
+                .style("stroke-width", 2)
+                .attr("stroke-opacity", 0.4);  
+        }
 
         function mouseoverSite(d) {
             let site = d;   
+            //console.log(this);
             renderer.adjustState(site, this, false, true, true);            
         }
 

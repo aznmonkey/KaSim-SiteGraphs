@@ -252,6 +252,8 @@ class DataStorage {
             //console.log(siteList[sites]);
             let entry = {};
             entry.name = 'root.' + siteList[sites].getAgent().label + '.' + siteList[sites].label;
+            entry.parentId = siteList[sites].getAgent().id;
+            entry.id = siteList[sites].id;
             let links = siteList[sites].listLinks();
             let linkArray = [];
 
@@ -310,7 +312,8 @@ class DataStorage {
             });
         });
 
-        return links;
+        //console.log(links);
+        return links;;
     }
 }
 
