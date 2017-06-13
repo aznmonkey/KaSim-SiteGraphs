@@ -116,10 +116,12 @@ class Render {
         this.sitew = this.radius/8;
         this.outerRadius = this.radius - this.nodew - this.statew;
         this.innerRadius = this.radius - this.nodew - this.statew - this.sitew;
+        this.nodeRadius = 5;
         //console.log("rendering");
         this.renderDonut();
         this.renderLinks();
         this.renderSitetoEdgeLinks();
+        this.renderStates();
     }
 
     generateLinks() {
@@ -175,8 +177,23 @@ class Render {
             .attr("class", "link")
             .attr("d", line)
             .attr("stroke", "steelblue")
-            .attr("stroke-width", 1.5)
-            .attr("stroke-opacity", 0.4);
+            .attr("stroke-width", 2)
+            .attr("stroke-opacity", 0.4)
+             .attr("stroke-dasharray", function() {
+                let totalLength = this.getTotalLength();
+                return totalLength + " " + totalLength;
+            })
+            .style("stroke-dashoffset", function() {
+                let totalLength = this.getTotalLength();
+                return totalLength;
+            })
+        .transition()
+            .duration(3000)
+            .style("stroke-dashoffset", function() {
+                let totalLength = this.getTotalLength();
+                return totalLength/2;
+            })
+            
 
     }
 
@@ -197,7 +214,7 @@ class Render {
             .attr('x2', this.outerRadius - circleRadius);
     }
 
-    renderStates(gSite) {
+    renderStates() {
         let lineLength = this.radius/4;   
         let width = this.width;
         let height = this.height;
@@ -249,17 +266,18 @@ class Render {
                                     if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
                                         return  "start"; }
                                     else 
-                                        return "end"; })
+                                        return "end"; 
+                                    })
                                 .attr("class", "stateText")
                                 .attr('alignment-baseline', "middle")
                                 .style("fill", "black")
-                                .style('font-size', '100%')
+                                .style('font-size', '110%')
                                 .attr("transform", function(d) {
                                     let r = (outerRadius + textLength + (lineLength - textLength) + 10);
                                     
-                                    let offset = (d.endAngle - d.startAngle)/site.states.length;
-
-                                    let angle = d.startAngle + 3/2 * Math.PI + state * offset;
+                                    let offset = (d.endAngle - d.startAngle)/(site.states.length + 1);
+                                    let angle = d.startAngle + 3/2 * Math.PI + (state) * offset + offset;
+                                    console.log(angle);
                                     let newX = r * Math.cos(angle) ;
                                     let newY = r * Math.sin(angle) ;
                                     if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
@@ -271,119 +289,11 @@ class Render {
                                 .text(site.states[state].name);
                         }
                     
-                }
-            }
-        }
-
-        /*let states = site.states;
-        /*
-        if (states.length < 1) {
-            return;
-        }
-        if (site.clicked || site.hover) {
-            if ((site.clicked && site.hover)) {
-                console.log("click and hover");
-                this.svg.selectAll('.stateLink')
-                    .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 1);
-                return;
-            }    
-            if(!site.hover && site.clicked)
-            {
-                console.log("unhover while clicked");
-                this.svg.selectAll('.stateLink')
-                    .filter( function(d) {return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 1);
-                return;
-            } 
-
-            if(!site.rendered) {
-                let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.6;
-                let gState = this.svg.selectAll('.stateLink')
-                    .data(this.siteList);
-
-                let stateLine = gState.enter() 
-                    .merge(gState)
-                    .filter( function(d) { return d.label === site.label && d.agent.label === site.agent.label ;} )   
-                    .append('g') 
-                    .attr('class','stateLink');
-                    
-                console.log("click or hover");
-                //console.log(site.label);
-                stateLine.append('line')
-                    .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
-                    .attr('opacity', 0.5)
-                    .attr('stroke','black')
-                    .attr('stroke-width', 2)
-                    .attr('x1', this.outerRadius + textLength)
-                    .attr('x2', this.outerRadius + textLength + (lineLength - textLength))
-                    .transition();
-
-                let stateArc = d3.arc()
-                        .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
-                        .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
-                        .startAngle(function(d) { return d.startAngle; 
-                        })
-                        .endAngle(function(d) { return d.endAngle;
-                        })
-                        .padAngle(Math.PI/200);
-        
-                
-                stateLine.append('path')
-                    .attr("d", stateArc)
-                    .style("fill", "black");
-
-                
-                
-                for ( let state in site.states ) {
-                    if (state) {
-                        stateLine.append("text")
-                            .attr("text-anchor", function (d) {
-                                if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
-                                    return  "start"; }
-                                else 
-                                    return "end"; })
-                            .attr("class", "stateText")
-                            .attr('alignment-baseline', "middle")
-                            .style("fill", "black")
-                            .style('font-size', '100%')
-                            .attr("transform", function(d) {
-                                let r = (outerRadius + textLength + (lineLength - textLength) + 10);
-                                
-                                let offset = (d.endAngle - d.startAngle)/site.states.length;
-
-                                let angle = d.startAngle + 3/2 * Math.PI + state * offset;
-                                let newX = r * Math.cos(angle) ;
-                                let newY = r * Math.sin(angle) ;
-                                if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
-                                    angle += Math.PI;
-                                } 
-                                //console.log(newX, newY);
-                                return "translate(" + newX + "," + newY + ") rotate(" + angle * 180/Math.PI + ")";
-                            })
-                            .text(site.states[state].name);
                     }
                 }
-                site.rendered = 1;
-            }
-            else {
-                if (site.hover) {
-                    this.svg.selectAll('.stateLink')
-                        .filter( function(d) { return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 1);
-                }
-            }
-        } 
+            }        
         
-        else {
-            console.log("mouseout");
-            console.log(site);
-            let selection = this.svg.selectAll(".stateLink")
-
-            selection.filter( function(d) {console.log(d); return d.label === site.label && d.agent.label === site.agent.label ;} ).style("opacity", 0);
-            console.log(selection);
         }
-        */
-        
- 
-    }
 
     calculateTextWidth(size) {
         let svg = d3.select("svg");
@@ -399,8 +309,7 @@ class Render {
     }
 
     renderDonut() {
-        let nodeRadius = 5;
-        let siteFont = "100%";
+        let nodeRadius = this.nodeRadius;
         let siteList = this.siteList;
         let layout = this.layout;
         let width = layout.dimension.width;
@@ -569,144 +478,99 @@ class Render {
                 return d.agent.color; 
 
             })
-            .on("click", click)
-            .on("mouseover", mouseover)
-            .on("mouseout", mouseout);
+            .on("click", clickSite)
+            .on("mouseover", mouseoverSite)
+            .on("mouseout", mouseoutSite);
             
-            /*
-            let site = this.siteList[sites];
-            //console.log(site.getStates());
 
-            let state = d3.pie()
-                    .sort(null)
-                    .value(function(d) {
-                        return 1;
-                    })
-                    .startAngle(site.startAngle)
-                    .endAngle(site.endAngle)
-                    .padAngle(0.01);
-
-            let stateArc = d3.arc()
-                .outerRadius(radius - 10 )
-                .innerRadius(radius - nodew + paddingw);
-    
-            /* draw state arc paths 
-            let gState = svg.selectAll(".stateArc")
-                    .data(state(site.getStates()))
-                    .enter().append("g");
-
-            gState.append("path")
-            .attr("d", stateArc)
-            .attr("id", function(d,i) { return "stateArc_" + site.label + "_" + i;})
-            .style("fill", function(d,i) { return c20(i);});
-
-            gState.append("text")
-            .attr("transform", function(d) { //set the label's origin to the center of the arc
-                return "translate(" + stateArc.centroid(d) + ")";
-            })
-			.style('font-size', '20px')
-            .attr('text-anchor', 'middle')
-			//.attr("xlink:href",function(d,i){return "#nodeArc_"+i;})
-            .style("fill", "black")
-             //place the text halfway on the arc
-            .text(function(d) { 
-                let label = d.data.name;
-                label = label.length > 10 ? label.substring(0,8): label;
-                return label; });
-        */
-        this.renderStates(gSite);
-
-        function mouseover (d) {
+        function mouseoverSite(d) {
             let site = d;   
-            site.hover += 1;   
-            d3.select(this).style("fill", function() {                
-                return d.currentColor;
-            }).attr("r", nodeRadius * 2.5);
-            
-            let siteText = svg.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
-            let transform = getTransform(siteText);
-            
-            
-            siteText
-                .style("font-weight", "bold")
-                .style("font-size", "150%" )
-                .attr("transform", function(d) {    let angle = d.data.getAngle();
-                                                        let newX = (parseFloat(transform.translate[0]) + 1.25 * nodeRadius  * Math.cos(angle));
-                                                        let newY = (parseFloat(transform.translate[1]) + 1.25 * nodeRadius  * Math.sin(angle));
-                                                        return "translate(" +  newX +
-                                                        ","  + newY +
-                                                        ") rotate(" + transform.rotate + ")" ;
-                                                    }); 
-
-            if (site.hover === 1) {
-                let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
-                let siteLength = siteText.node().getComputedTextLength() * 1.2 + radius/30;
-                stateLine.selectAll("line")
-                    .attr("x1", function() {return outerRadius + siteLength;} );
-                stateLine.attr("opacity", 1);
-            }
-             
-            
+            renderer.adjustState(site, this, false, true, true);            
         }
 
-        function mouseout (d) {
-            let site = d;
-            site.hover = 0;            
-            //renderer.renderStates(site);
-            d3.select(this).style("fill", function() {    
-                return d.currentColor;
-            }).attr("r", nodeRadius); 
-            let siteText = d3.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
-            let transform = getTransform(siteText);
-            
-            siteText
-                .style("font-weight", "normal")
-                .style("font-size", "100%")
-                .attr("transform", function(d) {    if (!d.clicked) {
-                                                            let angle = d.data.getAngle();
-                                                            let newX = (parseFloat(transform.translate[0]) - 1.25 * nodeRadius  * Math.cos(angle));
-                                                            let newY = (parseFloat(transform.translate[1]) - 1.25 * nodeRadius  * Math.sin(angle));
-                                                            return "translate(" +  newX +
-                                                            ","  + newY +
-                                                            ") rotate(" + transform.rotate + ")" ;
-                                                        }
-                                                        
-                                                    });    
-            let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
-            let siteLength = siteText.node().getComputedTextLength() * 1.2 + radius/30;
-            stateLine.selectAll("line")
-                .attr("x1", function() {return outerRadius + siteLength;} )
-            if (!d.clicked) {
-                 stateLine.attr('opacity', 0);   
-            }
-             
+        function mouseoutSite(d) {
+            let site = d;           
+            renderer.adjustState(site, this, true, true, false);    
         }
 
-        function click (d) {
+        function clickSite(d) {
             let originalColor = d.agent.color;
             let site = d;
             if (site.currentColor === originalColor) {
                     site.clicked += 1;
                     site.currentColor = "white";
                     if(site.clicked === 1) {
-                        let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
-                        stateLine.selectAll("line")
-                            .attr('opacity', 1);
+                        renderer.adjustState(site, this, false, false, false); 
                     }
             }
             else {
                 site.clicked = 0;
                 site.currentColor = originalColor;
-                let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
-                        stateLine.selectAll("line")
-                            .attr('opacity', 0);
+                renderer.adjustState(site, this, true, false, false); 
             }
-            console.log("click", site.clicked);
-            d3.select(this).style("fill", function() {    
-                return site.currentColor;
-            } );
-            
         }
 
+    }
+
+    adjustState(site, circle, hide, text, textMove) {
+        let nodeRadius = this.nodeRadius;
+        let outerRadius = this.outerRadius;
+        d3.select(circle).style("fill", function() {                
+                return site.currentColor;
+            }).attr("r", function() { 
+                if(!hide) {
+                    return nodeRadius * 2.5; }
+                else {
+                    return nodeRadius; 
+                }
+            });
+            
+            let siteText = this.svg.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
+            let transform = getTransform(siteText);
+            
+            if (text) {
+                siteText
+                    .style("font-weight", function() {
+                        if (hide) 
+                            return "normal";
+                        else 
+                            return "bold";})
+                    .style("font-size", function() {
+                        if (hide) 
+                            return "110%";
+                        else 
+                            return "150%";}) 
+                    .attr("transform", function(d) {    let angle = d.data.getAngle();
+                                                        let newX;
+                                                        let newY;
+                                                        if(textMove) {
+                                                            newX = (parseFloat(transform.translate[0]) + 1.25 * nodeRadius  * Math.cos(angle));
+                                                            newY = (parseFloat(transform.translate[1]) + 1.25 * nodeRadius  * Math.sin(angle));
+                                                        }
+                                                        else {
+                                                            newX = (parseFloat(transform.translate[0]) - 1.25 * nodeRadius  * Math.cos(angle));
+                                                            newY = (parseFloat(transform.translate[1]) - 1.25 * nodeRadius  * Math.sin(angle));
+                                                        }
+                                                        return "translate(" +  newX +
+                                                        ","  + newY +
+                                                        ") rotate(" + transform.rotate + ")" ;
+                                                    }); 
+            }
+
+            let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
+            let siteLength = siteText.node().getComputedTextLength() * 1.2 + this.radius/30;
+
+            if (!hide) {
+                stateLine.selectAll("line")
+                    .attr("x1", function() {return outerRadius + siteLength;} );
+                stateLine.attr("opacity", 1);
+            }
+            else {
+                stateLine.selectAll("line")
+                .attr("x1", function() {return outerRadius + siteLength;} );
+                if (!site.clicked) {
+                    stateLine.attr('opacity', 0);   
+            }
+        }
     }
 }
