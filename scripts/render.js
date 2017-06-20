@@ -164,7 +164,9 @@ class Render {
             .attr("d", line)
             .attr("stroke", "steelblue")
             .attr("stroke-width", 2)
-            .style("stroke-opacity", 0.4);
+            .style("stroke-opacity", 0.4)
+            .on("mouseover", mouseoverLinks)
+            .on("mouseout", mouseoutLinks);
             // transitions
             /*
             .attr("stroke-dasharray", function() {
@@ -179,6 +181,29 @@ class Render {
             })
             .classed("offset", true);
         */
+        function mouseoverLinks(d) {
+            /*
+            console.log("link moused over");
+            svg.selectAll(".link").style("stroke-opacity", 0.1);
+            svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
+            svg.selectAll(".siteText").attr("opacity", 0.4);
+            d3.select(this)
+                .attr("opacity", 0.8)
+                .style("stroke", function(d) {
+                    return data.getNode(d.source.data.parentId).color.brighter();
+                });
+            */
+        }
+
+        function mouseoutLinks(d) {
+            /*
+            svg.selectAll(".link")
+                .style("stroke-opacity", 0.4)
+                .style("stroke", "steelblue");
+            svg.selectAll(".selfLoop").style("stroke-opacity", 0.4);
+            svg.selectAll(".siteText").attr("opacity", 0.4);
+            */
+        }
     }
 
     renderSitetoEdgeLinks() {
@@ -508,7 +533,7 @@ class Render {
                 .style("stroke-opacity", 0.75);  
 
             selfLoops
-                .style("stroke", node.data.color)
+                .style("stroke", node.data.color.brighter())
                 .style("stroke-width", 8)
                 .style("stroke-opacity", 0.75); 
 
@@ -562,8 +587,7 @@ class Render {
 
         function mouseoverInnerSite(d) {
             let event = this;
-            let innerSite = d;
-            console.log(d);
+            let innerSite = d;;
             let targetSites = [];
             d3.select(this)
                 .style("stroke", function() {return innerSite.currentColor.darker(1);});
@@ -585,6 +609,10 @@ class Render {
                 return d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id;
             });  
 
+            let selfLoops = svg.selectAll(".selfLoop").filter(function(d) { 
+                return d.getAgent().id === innerSite.getAgent().id;
+            });  
+
             links
                 .style("stroke", function(d) {
                     return data.getNode(d.source.data.parentId).color.brighter();
@@ -592,7 +620,11 @@ class Render {
                 .style("stroke-width", 8)
                 .style("stroke-opacity", 0.75); 
 
-            console.log(targetSites);
+            selfLoops
+                .style("stroke", innerSite.getAgent().color.brighter())
+                .style("stroke-width", 8)
+                .style("stroke-opacity", 0.75); 
+
             targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
             let targetTexts = svg.selectAll(".siteText").filter(function(d) { return targetSites.includes( d.data );});
          
@@ -610,8 +642,14 @@ class Render {
             d3.select(this)
                 .style("stroke", function() {return innerSite.currentColor;});
 
-            svg.selectAll(".link").style("stroke-opacity", 0.4);
-            svg.selectAll(".selfLoop").style("stroke-opacity", 0.4);
+            svg.selectAll(".link")
+                .style("stroke", "steelblue")
+                .style("stroke-width", 2)
+                .style("stroke-opacity", 0.4); 
+            svg.selectAll(".selfLoop")
+                .style("stroke", "steelblue")
+                .style("stroke-width", 2)
+                .style("stroke-opacity", 0.4);
             svg.selectAll(".siteText").attr("opacity", 1)
                 .style("font-weight", "normal")
                 .style("font-size", "110%");
