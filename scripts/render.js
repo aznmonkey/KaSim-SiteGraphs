@@ -492,7 +492,9 @@ class Render {
 
             targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
             let targetTexts = svg.selectAll(".siteText").filter(function(d) { return targetSites.includes( d.data );});
+            svg.selectAll(".siteText").attr("opacity", 0.4);
             targetTexts
+                .attr("opacity", 1)
                 .style("font-weight", "bold")
                 .style("font-size", "150%");
             links
@@ -555,6 +557,7 @@ class Render {
             //targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
             let targetTexts = svg.selectAll(".siteText");
             targetTexts
+                .attr("opacity", 1)
                 .style("font-weight", "normal")
                 .style("font-size", "110%");
             links
