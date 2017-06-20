@@ -263,10 +263,7 @@ class DataStorage {
                 return -1;
             else 
                 return 0;
-        })
-        for (let key in this.data) {
-            this.data[key].sortedIndex = key;   
-        }
+        });
     }
     
     constructHierarchy() {

@@ -418,7 +418,9 @@ class Render {
             .attr('r', siteRadius)
             .attr("fill", function(d) {
                 return d.agent.color; 
-            });
+            })
+            .on("mouseover", mouseoverInnerSite)
+            .on("mouseout", mouseoutInnerSite);
 
         // render outer sites
         gSiteNodes
@@ -463,7 +465,7 @@ class Render {
             .style("stroke-width", 2);
         
       
-
+        
         function mouseoverNode(d) {
             let event = this;
             let node = d;
@@ -475,6 +477,7 @@ class Render {
 
             svg.selectAll(".link").style("stroke-opacity", 0.1);
             svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
+            svg.selectAll(".siteText").attr("opacity", 0.4);
             let links = svg.selectAll(".link").filter(function(d) { 
                 let site = {};
                 if(d.target.data.parentId === node.data.id || d.source.data.parentId === node.data.id) {
@@ -492,29 +495,14 @@ class Render {
 
             targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
             let targetTexts = svg.selectAll(".siteText").filter(function(d) { return targetSites.includes( d.data );});
-            svg.selectAll(".siteText").attr("opacity", 0.4);
+         
             targetTexts
                 .attr("opacity", 1)
                 .style("font-weight", "bold")
                 .style("font-size", "150%");
             links
                 .style("stroke", function(d) {
-                    console.log(data.getNode(d.source.data.parentId).sortedIndex, data.getNode(d.target.data.parentId).sortedIndex);
                     return data.getNode(d.source.data.parentId).color.brighter();
-                    /*if (data.getNode(d.source.data.parentId).sortedIndex < node.data.sortedIndex) {
-                        if (d.target.data.parentId < node.data.id)
-                            return data.getNode(d.source.data.parentId).color.brighter();
-                        else
-                    }
-                    else if (data.getNode(d.source.data.parentId).sortedIndex === node.data.sortedIndex) {
-                        return node.data.color.brighter();
-                    }
-                    else {
-                        if (d.target.data.parentId < node.data.id)
-                            return data.getNode(d.target.data.parentId).color.brighter();
-                        else
-                            return data.getNode(d.source.data.parentId).color.brighter();
-                    }*/
                 })
                 .style("stroke-width", 8)
                 .style("stroke-opacity", 0.75);  
@@ -570,6 +558,64 @@ class Render {
                 .style("stroke-opacity", 0.4); 
 
             tip.hide();
+        }
+
+        function mouseoverInnerSite(d) {
+            let event = this;
+            let innerSite = d;
+            console.log(d);
+            let targetSites = [];
+            d3.select(this)
+                .style("stroke", function() {return innerSite.currentColor.darker(1);});
+
+            svg.selectAll(".link").style("stroke-opacity", 0.1);
+            svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
+            svg.selectAll(".siteText").attr("opacity", 0.4);
+            let links = svg.selectAll(".link").filter(function(d) { 
+                let siteS = {};
+                let siteT = {};
+                if(d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id) {
+                    siteT.id = d.target.data.id ;
+                    siteT.parentId = d.target.data.parentId;
+                    siteS.id = d.source.data.id ;
+                    siteS.parentId = d.source.data.parentId;
+                    targetSites.push(siteS);
+                    targetSites.push(siteT);  
+                }
+                return d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id;
+            });  
+
+            links
+                .style("stroke", function(d) {
+                    return data.getNode(d.source.data.parentId).color.brighter();
+                })
+                .style("stroke-width", 8)
+                .style("stroke-opacity", 0.75); 
+
+            console.log(targetSites);
+            targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
+            let targetTexts = svg.selectAll(".siteText").filter(function(d) { return targetSites.includes( d.data );});
+         
+            targetTexts
+                .attr("opacity", 1)
+                .style("font-weight", "bold")
+                .style("font-size", "150%");
+        }
+
+        function mouseoutInnerSite(d) {
+            let event = this;
+            let innerSite = d;
+            let links = innerSite.links;
+            let targetSites = [];
+            d3.select(this)
+                .style("stroke", function() {return innerSite.currentColor;});
+
+            svg.selectAll(".link").style("stroke-opacity", 0.4);
+            svg.selectAll(".selfLoop").style("stroke-opacity", 0.4);
+            svg.selectAll(".siteText").attr("opacity", 1)
+                .style("font-weight", "normal")
+                .style("font-size", "110%");
+            
         }
 
         function mouseoverSite(d) {
