@@ -15,7 +15,9 @@ class Parser {
       httpRequest.onload = function() {
         if (httpRequest.status == 200) {
         // Resolve the promise with the response text
+          console.log(httpRequest.responseText);
           let data = JSON.parse(httpRequest.responseText);
+          console.log(data);
           resolve(parser.populateData(data));
 
         }

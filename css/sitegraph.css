@@ -7,6 +7,7 @@ body {
 .link {
   stroke: steelblue;
   stroke-opacity: 0.4;
+  stroke-width:2;
   fill: none;
   pointer-events: none;
 }
@@ -23,3 +24,30 @@ body {
     right:0;
 }
 
+.offset {
+  transition: stroke-dashoffset 3000ms ease;
+  stroke-dashoffset: 100%;
+}
+
+.tooltip {
+  position: absolute;
+  text-align: center;
+  border: 0px;
+  border-radius: 8px;
+}
+
+.stateButtonDiv {
+    position: absolute;
+    text-align: center;   
+}
+
+.stateButton {
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}

@@ -84,6 +84,36 @@ class Site extends D3Object {
         return this.states;
     }
 
+    generateSelfLoopPath(innerRadius) {
+         let pathObj = [];
+            let pathPointStart = {};
+            pathPointStart.x = this.cartX(innerRadius);
+            pathPointStart.y = this.cartY(innerRadius);
+
+            let pathPointSide1 = {};
+
+            pathPointSide1.x = 7 * innerRadius/8 * Math.cos(this.startAngle + 3 * Math.PI/2);
+            pathPointSide1.y = 7 * innerRadius/8 * Math.sin(this.startAngle + 3 * Math.PI/2);
+
+            let pathPointMid = {};
+            pathPointMid.x = this.cartX(3 * innerRadius / 4);
+            pathPointMid.y = this.cartY(3 * innerRadius / 4);
+            
+            let pathPointSide2 = {};
+
+            pathPointSide2.x = 7 * innerRadius/8 * Math.cos(this.endAngle + 3 * Math.PI/2);
+            pathPointSide2.y = 7 * innerRadius/8 * Math.sin(this.endAngle + 3 * Math.PI/2);
+
+            let pathPointEnd = {};
+            pathPointEnd.x = this.cartX(innerRadius);
+            pathPointEnd.y = this.cartY(innerRadius);
+            pathObj.push(pathPointStart);
+            pathObj.push(pathPointSide1);
+            pathObj.push(pathPointMid);
+            pathObj.push(pathPointSide2);
+            pathObj.push(pathPointEnd);
+            return pathObj;
+    }
     generateTreeObj() {
         let treeObj = {};
         treeObj.name = this.label;
@@ -233,7 +263,10 @@ class DataStorage {
                 return -1;
             else 
                 return 0;
-        });
+        })
+        for (let key in this.data) {
+            this.data[key].sortedIndex = key;   
+        }
     }
     
     constructHierarchy() {
@@ -313,7 +346,7 @@ class DataStorage {
         });
 
         //console.log(links);
-        return links;;
+        return links;
     }
 }
 
