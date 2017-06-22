@@ -12,6 +12,15 @@ class UIManager {
             .style("opacity", 0)
             .style("padding", "0.5em");
 
+        this.cycleDetection = renderer.root.append("div")
+            .attr("class", "checkboxDiv")
+            .append('label')
+            .text("Interactive Mode")
+        .append("input")
+            .attr("id", "cycleCheckbox")
+            .attr("type", "checkbox")
+            .on("change", toggleCycleDetection);
+
         this.stateToggle = renderer.root.append("div")
             .attr("class", "stateButtonDiv")
             .style("right" , 0)
@@ -23,6 +32,16 @@ class UIManager {
             .attr("value", "Show All States")
             .on("click", showStates);
 
+        function toggleCycleDetection() {
+            console.log("checked");
+            if (d3.select("#cycleCheckbox").property("checked")) {
+                renderer.cycleDetect = true;
+                renderer.rerenderLinks();
+            }
+            else 
+                renderer.cycleDetect = false;
+                renderer.rerenderLinks();
+        }
 
         function showStates() {
             UI.buttonClicked = UI.buttonClicked === 0 ? 1: 0;
@@ -48,7 +67,6 @@ class UIManager {
                 });
                 renderer.root.selectAll(".stateButton").attr("value", "Show All States");
             }
-            console.log(test);
         }
     }
     

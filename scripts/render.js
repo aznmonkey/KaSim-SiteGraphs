@@ -135,7 +135,20 @@ class Render {
         }
     }
 
+    rerenderLinks() {
+        let renderer = this;
+        let svg = this.svg;
+        if(renderer.cycleDetect === true ) {
+            svg.selectAll('.link').style("stroke-opacity", 0.1);
+            return;
+        }
+        else {
+            svg.selectAll('.link').style("stroke-opacity", 0.4);
+            return;
+        }
+    }
     renderLinks() {
+        let renderer = this;
         let siteRadius = this.siteRadius;
         let data = this.layout.contactMap.data;
         let layout = this.layout;
@@ -155,18 +168,20 @@ class Render {
             .angle(function(d) { return d.x / 180 * Math.PI; });
 
         cluster(hierarchy);
-        
+
         let links = svg.selectAll('.link')
             .data(data.packageLinks(hierarchy.leaves()))
-            .enter().append("path")
-            .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
+        .enter().append("path")
+            .each(function(d) { d.clicked = 0; d.source = d[0], d.target = d[d.length - 1]; })
             .attr("class", "link")
             .attr("d", line)
             .attr("stroke", "steelblue")
             .attr("stroke-width", 2)
             .style("stroke-opacity", 0.4)
-            .on("mouseover", mouseoverLinks)
-            .on("mouseout", mouseoutLinks);
+            .on("mouseover", mouseoverLink)
+            .on("mouseout", mouseoutLink)
+            .on("click", clickLink);
+        
             // transitions
             /*
             .attr("stroke-dasharray", function() {
@@ -181,28 +196,94 @@ class Render {
             })
             .classed("offset", true);
         */
-        function mouseoverLinks(d) {
-            /*
-            console.log("link moused over");
-            svg.selectAll(".link").style("stroke-opacity", 0.1);
-            svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
-            svg.selectAll(".siteText").attr("opacity", 0.4);
-            d3.select(this)
-                .attr("opacity", 0.8)
-                .style("stroke", function(d) {
-                    return data.getNode(d.source.data.parentId).color.brighter();
-                });
-            */
+
+        function clickLink(d) {
+            if (renderer.cycleDetect) {
+                
+                let selectedLink = d;
+                let clickedLink = d3.select(this);
+                
+                    
+                let targetTexts = svg.selectAll(".siteText").filter(d => (d.data.getAgent().id === selectedLink.target.data.parentId &&
+                                                                            d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId &&
+                                                                            d.data.id === selectedLink.source.data.id));
+                if(!selectedLink.clicked) {
+                    console.log(clickedLink);
+                    let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) ||
+                                                                    (selectedLink.source.data.parentId === d.source.data.parentId)) &&
+                                                                    ((selectedLink.source.data.id != d.source.data.id) &&
+                                                                    (d.target.data.id != selectedLink.source.data.id)) );
+                    clickedLink
+                        .attr("stroke-width", d => { d.clicked = true; return 8;} )
+                        .style("stroke-opacity", 1);
+                    sideLinks
+                        .attr("stroke-width", d => { d.side = true; return 8;} )
+                        .style("stroke-opacity", d => { if (d.clicked) return 1; else return 0.2; } );
+                    targetTexts
+                        .classed("siteText--normal", false);
+                    
+                }
+                else {
+                    let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) ||
+                                                                    (selectedLink.source.data.parentId === d.source.data.parentId)) &&
+                                                                    ((selectedLink.source.data.id != d.source.data.id) &&
+                                                                    (d.target.data.id != selectedLink.source.data.id)) );
+                    clickedLink
+                        .attr("stroke-width", d => { d.clicked = false; return 8;} )
+                        .style("stroke-opacity", 0.4);
+            
+                    sideLinks
+                        .attr("stroke-width", d => { d.side = false; if( d.clicked) return 8; else return 2; } )
+                        .style("stroke-opacity", d => { if (d.clicked) return 0.9; else return 0.2; } );
+    
+                    targetTexts
+                        .classed("siteText--normal", true);
+        
+                }
+            }
+
+        }
+        function mouseoverLink(d) {
+            if (renderer.cycleDetect) {
+                    svg.selectAll(".link").style("stroke-opacity", d => { if(d.clicked) return 0.8; else if(d.side) return 0.2; else return 0.1; });
+                    svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
+                    svg.selectAll(".siteText").filter(".siteText-normal").attr("opacity", 0.4);
+
+                if(!d.clicked) {
+                    let selectedLink = d;
+                    console.log(d);
+
+                    let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) ||
+                                                                        (selectedLink.source.data.parentId === d.source.data.parentId)) &&
+                                                                        ((selectedLink.source.data.id != d.source.data.id) &&
+                                                                        (d.target.data.id != selectedLink.source.data.id)) );
+                        
+                    let targetTexts = svg.selectAll(".siteText").filter(d => (d.data.getAgent().id === selectedLink.target.data.parentId &&
+                                                                                d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId &&
+                                                                                d.data.id === selectedLink.source.data.id));
+                    sideLinks
+                        .style("stroke-opacity", 0.2)
+                        .style("stroke-width", 8)
+            
+                    
+                    d3.select(this)
+                        .style("stroke-opacity", 0.8)
+                        .style("stroke-width", 8)
+        
+
+                    targetTexts
+                        .attr("opacity", 1)
+                        .style("font-weight", "bold")
+                        .style("font-size", "150%");
+                }
+            }
+
         }
 
-        function mouseoutLinks(d) {
-            /*
-            svg.selectAll(".link")
-                .style("stroke-opacity", 0.4)
-                .style("stroke", "steelblue");
-            svg.selectAll(".selfLoop").style("stroke-opacity", 0.4);
-            svg.selectAll(".siteText").attr("opacity", 0.4);
-            */
+        function mouseoutLink(d) {
+            if (renderer.cycleDetect) {
+                renderer.resetLinksAndEdges(); 
+            }
         }
     }
 
@@ -410,7 +491,7 @@ class Render {
                     return  "start"; }
                 else 
                     return "end"; })
-            .attr("class", "siteText")
+            .attr("class", "siteText siteText--normal")
             .attr('alignment-baseline', "middle")
             .attr("transform", function(d) {
                 let xy = siteArc.centroid(d) ;
@@ -568,19 +649,7 @@ class Render {
             });  
             
             //targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
-            let targetTexts = svg.selectAll(".siteText");
-            targetTexts
-                .attr("opacity", 1)
-                .style("font-weight", "normal")
-                .style("font-size", "110%");
-            links
-                .style("stroke", "steelblue")
-                .style("stroke-width", 2)
-                .style("stroke-opacity", 0.4);  
-            selfLoops
-                .style("stroke", "steelblue")
-                .style("stroke-width", 2)
-                .style("stroke-opacity", 0.4); 
+            renderer.resetLinksAndEdges();
 
             tip.hide();
         }
@@ -610,7 +679,7 @@ class Render {
             });  
 
             let selfLoops = svg.selectAll(".selfLoop").filter(function(d) { 
-                return d.getAgent().id === innerSite.getAgent().id;
+                return d.getAgent().id === innerSite.getAgent().id && d.id === innerSite.id;
             });  
 
             links
@@ -642,17 +711,7 @@ class Render {
             d3.select(this)
                 .style("stroke", function() {return innerSite.currentColor;});
 
-            svg.selectAll(".link")
-                .style("stroke", "steelblue")
-                .style("stroke-width", 2)
-                .style("stroke-opacity", 0.4); 
-            svg.selectAll(".selfLoop")
-                .style("stroke", "steelblue")
-                .style("stroke-width", 2)
-                .style("stroke-opacity", 0.4);
-            svg.selectAll(".siteText").attr("opacity", 1)
-                .style("font-weight", "normal")
-                .style("font-size", "110%");
+            renderer.resetLinksAndEdges();
             
         }
 
@@ -684,6 +743,39 @@ class Render {
             }
         }
 
+    }
+
+    resetLinksAndEdges() {
+        let svg = this.svg;
+        let renderer = this;
+        svg.selectAll('.link')
+            .style("stroke", "steelblue")
+            .style("stroke-width", d => { 
+                if(d.clicked || d.side) 
+                    return 8; 
+                else 
+                    return 2; 
+                })
+            .style("stroke-opacity",d => { 
+                if (renderer.cycleDetect) {
+                    if(d.clicked) 
+                        return 0.9;
+                    else if(d.side) 
+                        return 0.2;
+                    else 
+                     return 0.1; 
+                }
+                else {
+                    return 0.4;
+                }
+            });
+        svg.selectAll(".selfLoop")
+            .style("stroke", "steelblue")
+            .style("stroke-width", 2)
+            .style("stroke-opacity", d =>  {if (renderer.cycleDetect) return 0.1; else return 0.4; });
+        svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 1)
+            .style("font-weight", "normal")
+            .style("font-size", "110%");
     }
 
     adjustState(site, circle, hide, text, textMove) {

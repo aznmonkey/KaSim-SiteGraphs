@@ -9,20 +9,10 @@ body {
   stroke-opacity: 0.4;
   stroke-width:2;
   fill: none;
-  pointer-events: none;
 }
 
+
 .node { cursor: pointer; }
-#graph {
-    transition:transform 200ms ease;
-    transform:translateX(100%);
-    width:33%;
-    height:100%;
-    background:#fafaea;
-    position:fixed;
-    top:0;
-    right:0;
-}
 
 .offset {
   transition: stroke-dashoffset 3000ms ease;
@@ -39,6 +29,13 @@ body {
 .stateButtonDiv {
     position: absolute;
     text-align: center;   
+}
+
+.checkboxDiv {
+  position: absolute;
+  text-align: center;
+  top: 0;
+  left: 0;  
 }
 
 .stateButton {
