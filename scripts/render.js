@@ -23,8 +23,7 @@ class ContactMap {
         let map = this;
         let parser = new Parser();
         /* populates the data */
-        parser.readJson(json).then( function(response) {
-            //console.log(response);
+        parser.readJson(json).then( (response) => {
             map.data = response;
             map.data.sortNodes();
             map.data.sortSites();
@@ -84,9 +83,7 @@ class Render {
         
         this.agentNames = layout.contactMap.data
                               .listNodes()
-                              .map(function(node){
-                                return node.label;
-                              });
+                              .map( node => node.label );
                         
         this.siteList = [];
         let data = this.layout.contactMap.data;
@@ -119,6 +116,11 @@ class Render {
         this.renderStates();
     }
 
+    rerender() {
+        this.rerenderNodes();
+        this.rerenderLinks();
+    }
+
     generateLinks() {
         let data = this.layout.contactMap.data;
         this.siteLinks = [];
@@ -135,6 +137,22 @@ class Render {
         }
     }
 
+    rerenderNodes() {
+        let renderer = this;
+        let svg = this.svg;
+        if(renderer.cycleDetect === true ) {
+            svg.selectAll('.nodeArcPath').style("fill-opacity", opacity.node_hidden);
+            return;
+        }
+        else {
+            svg.selectAll('.nodeArcPath')
+                .style("fill-opacity", d => { d.clicked = 0; d.side = 0; return opacity.node_normal;})
+                .style("stroke-width", 0);
+            return;
+
+        }
+    }
+
     rerenderLinks() {
         let renderer = this;
         let svg = this.svg;
@@ -143,7 +161,11 @@ class Render {
             return;
         }
         else {
-            svg.selectAll('.link').style("stroke-opacity", 0.4);
+            svg.selectAll('.link')
+                .style("stroke-width", d => { d.clicked = 0; d.side = 0; return 2;});
+            svg.selectAll('.siteText')
+                .classed("siteText--normal", true);
+            renderer.resetLinksAndEdges();
             return;
         }
     }
@@ -160,19 +182,19 @@ class Render {
         let svg = this.svg;
         let hierarchy = this.hierarchy;
         let cluster =  d3.cluster()
-            .separation(function(a, b) { return 1; })
+            .separation( (a, b) =>  1 )
             .size([360, innerRadius - siteRadius/2]);
         let line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
-            .radius(function(d) { return d.y; })
-            .angle(function(d) { return d.x / 180 * Math.PI; });
+            .radius( d => d.y )
+            .angle( d =>  d.x / 180 * Math.PI );
 
         cluster(hierarchy);
 
         let links = svg.selectAll('.link')
             .data(data.packageLinks(hierarchy.leaves()))
         .enter().append("path")
-            .each(function(d) { d.clicked = 0; d.source = d[0], d.target = d[d.length - 1]; })
+            .each(d => { d.clicked = 0; d.source = d[0], d.target = d[d.length - 1]; })
             .attr("class", "link")
             .attr("d", line)
             .attr("stroke", "steelblue")
@@ -201,39 +223,46 @@ class Render {
             if (renderer.cycleDetect) {
                 
                 let selectedLink = d;
+                let targetNodes = [];
                 let clickedLink = d3.select(this);
                 
                     
                 let targetTexts = svg.selectAll(".siteText").filter(d => (d.data.getAgent().id === selectedLink.target.data.parentId &&
-                                                                            d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId &&
+                                                                            d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId && 
                                                                             d.data.id === selectedLink.source.data.id));
+
+                let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) &&
+                                                                        ((selectedLink.target.data.id != d.source.data.id) &&
+                                                                        (selectedLink.source.data.id != d.target.data.id)) ||
+                                                                        (selectedLink.source.data.parentId === d.source.data.parentId) &&
+                                                                        ((selectedLink.source.data.id != d.source.data.id))));
+                
+                targetNodes.push(d.target.data.parentId);
+                targetNodes.push(d.source.data.parentId);
+                
+                targetNodes = dedup(targetNodes);
+                let nodes = svg.selectAll(".nodeArcPath").filter( d => targetNodes.includes(  d.data.id ) );
+                nodes
+                    .style("stroke-width", d => { d.clicked = 1; return 5; })
+
                 if(!selectedLink.clicked) {
-                    console.log(clickedLink);
-                    let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) ||
-                                                                    (selectedLink.source.data.parentId === d.source.data.parentId)) &&
-                                                                    ((selectedLink.source.data.id != d.source.data.id) &&
-                                                                    (d.target.data.id != selectedLink.source.data.id)) );
                     clickedLink
-                        .attr("stroke-width", d => { d.clicked = true; return 8;} )
+                        .attr("stroke-width", d => { d.clicked = 1; return 8;} )
                         .style("stroke-opacity", 1);
                     sideLinks
-                        .attr("stroke-width", d => { d.side = true; return 8;} )
+                        .attr("stroke-width", d => { d.side = 1; return 8;} )
                         .style("stroke-opacity", d => { if (d.clicked) return 1; else return 0.2; } );
                     targetTexts
                         .classed("siteText--normal", false);
                     
                 }
                 else {
-                    let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) ||
-                                                                    (selectedLink.source.data.parentId === d.source.data.parentId)) &&
-                                                                    ((selectedLink.source.data.id != d.source.data.id) &&
-                                                                    (d.target.data.id != selectedLink.source.data.id)) );
                     clickedLink
-                        .attr("stroke-width", d => { d.clicked = false; return 8;} )
+                        .attr("stroke-width", d => { d.clicked = 0; return 8;} )
                         .style("stroke-opacity", 0.4);
             
                     sideLinks
-                        .attr("stroke-width", d => { d.side = false; if( d.clicked) return 8; else return 2; } )
+                        .attr("stroke-width", d => { d.side = 0; if( d.clicked) return 8; else return 2; } )
                         .style("stroke-opacity", d => { if (d.clicked) return 0.9; else return 0.2; } );
     
                     targetTexts
@@ -251,24 +280,41 @@ class Render {
 
                 if(!d.clicked) {
                     let selectedLink = d;
-                    console.log(d);
-
-                    let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) ||
-                                                                        (selectedLink.source.data.parentId === d.source.data.parentId)) &&
-                                                                        ((selectedLink.source.data.id != d.source.data.id) &&
-                                                                        (d.target.data.id != selectedLink.source.data.id)) );
+                    let targetNodes = [];
+                    let sideLinks = svg.selectAll(".link").filter( d => ((selectedLink.target.data.parentId === d.source.data.parentId) &&
+                                                                        ((selectedLink.target.data.id != d.source.data.id) &&
+                                                                        (selectedLink.source.data.id != d.target.data.id)) ||
+                                        
+                                                                        (selectedLink.source.data.parentId === d.source.data.parentId) &&
+                                                                        ((selectedLink.source.data.id != d.source.data.id))) );
                         
-                    let targetTexts = svg.selectAll(".siteText").filter(d => (d.data.getAgent().id === selectedLink.target.data.parentId &&
+                    let targetTexts = svg.selectAll(".siteText").filter( d => (d.data.getAgent().id === selectedLink.target.data.parentId &&
                                                                                 d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId &&
-                                                                                d.data.id === selectedLink.source.data.id));
+                                                                                d.data.id === selectedLink.source.data.id) );
+                    
+                    targetNodes.push(d.target.data.parentId);
+                    targetNodes.push(d.source.data.parentId);
+                    for (let link in sideLinks.data()) {
+                        targetNodes.push(sideLinks.data()[link].target.data.parentId);
+                        targetNodes.push(sideLinks.data()[link].source.data.parentId);
+                    }
+
+                    targetNodes = dedup(targetNodes);
+                    //console.log(targetNodes);
+                    let nodes = svg.selectAll(".nodeArcPath").filter( d => targetNodes.includes(  d.data.id ) );
+                    nodes
+                        .style("stroke-width", 5)
+                        .style("stroke", d =>  d.data.color.darker(1) )
+                        .style("fill-opacity", opacity.node_normal);
+                    
                     sideLinks
                         .style("stroke-opacity", 0.2)
-                        .style("stroke-width", 8)
+                        .style("stroke-width", 8);
             
                     
                     d3.select(this)
                         .style("stroke-opacity", 0.8)
-                        .style("stroke-width", 8)
+                        .style("stroke-width", 8);
         
 
                     targetTexts
@@ -317,7 +363,7 @@ class Render {
 
                 let stateLine = gState.enter() 
                     .merge(gState)
-                    .filter( function(d) { return d.label === site.label && d.agent.label === site.agent.label ;} )   
+                    .filter( d => d.label === site.label && d.agent.label === site.agent.label )   
                     .append('g') 
                     .attr('class','stateLink')
                     .attr('id', function(d) { return "stateLink" + d.agent.id + d.id; })
@@ -335,10 +381,8 @@ class Render {
                     let stateArc = d3.arc()
                             .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
                             .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
-                            .startAngle(function(d) { return d.startAngle; 
-                            })
-                            .endAngle(function(d) { return d.endAngle;
-                            })
+                            .startAngle( d => d.startAngle )
+                            .endAngle( d => d.endAngle )
                             .padAngle(Math.PI/200);
             
                     
@@ -351,7 +395,7 @@ class Render {
                     for ( let state in site.states ) {
                         if (state) {
                             stateLine.append("text")
-                                .attr("text-anchor", function (d) {
+                                .attr("text-anchor", d => {
                                     if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
                                         return  "start"; }
                                     else 
@@ -361,7 +405,7 @@ class Render {
                                 .attr('alignment-baseline', "middle")
                                 .style("fill", "black")
                                 .style('font-size', '110%')
-                                .attr("transform", function(d) {
+                                .attr("transform", d => {
                                     let r = (outerRadius + textLength + (lineLength - textLength) + 10);
                                     
                                     let offset = (d.endAngle - d.startAngle)/(site.states.length + 1);
@@ -443,6 +487,7 @@ class Render {
         
         /* render node arcs paths */
         gNode.append("path")
+            .attr("class", "nodeArcPath")
             .attr("d", nodeArc)
             //.attr("id", function(d,i) { return "nodeArc_" + i;})
             .style("fill", function(d,i) { 
@@ -579,12 +624,14 @@ class Render {
             let targetSites = [];
             d3.select(this)
                 .style("stroke-width", 5)
-                .style("stroke", function() {return node.data.color.darker(1);});
+                .style("stroke", () =>  node.data.color.darker(1) );
 
             svg.selectAll(".link").style("stroke-opacity", 0.1);
             svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
-            svg.selectAll(".siteText").attr("opacity", 0.4);
-            let links = svg.selectAll(".link").filter(function(d) { 
+            svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
+            svg.selectAll(".nodeArcPath").style("fill-opacity", opacity.node_hidden);
+
+            let links = svg.selectAll(".link").filter( d => { 
                 let site = {};
                 if(d.target.data.parentId === node.data.id || d.source.data.parentId === node.data.id) {
                     site.id = d.target.data.id ;
@@ -595,21 +642,23 @@ class Render {
                 
             });  
             
-            let selfLoops = svg.selectAll(".selfLoop").filter(function(d) { 
-                return d.getAgent().id === node.data.id;
-            });  
+            let selfLoops = svg.selectAll(".selfLoop").filter( d => d.getAgent().id === node.data.id );  
 
-            targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
-            let targetTexts = svg.selectAll(".siteText").filter(function(d) { return targetSites.includes( d.data );});
+            let targetNodes = dedup(targetSites.map( d => data.getNode(d.parentId) ));
+            let nodes = svg.selectAll(".nodeArcPath").filter( d => targetNodes.includes(  d.data ));
+            nodes
+                .style("fill-opacity", opacity.node_normal);
+
+            targetSites = targetSites.map( d => data.getSite(d.parentId, d.id ));
+            
+            let targetTexts = svg.selectAll(".siteText").filter( d => targetSites.includes( d.data ) );
          
             targetTexts
                 .attr("opacity", 1)
                 .style("font-weight", "bold")
                 .style("font-size", "150%");
             links
-                .style("stroke", function(d) {
-                    return data.getNode(d.source.data.parentId).color.brighter();
-                })
+                .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
                 .style("stroke-width", 8)
                 .style("stroke-opacity", 0.75);  
 
@@ -630,7 +679,14 @@ class Render {
                 .style("stroke-width", 0)
                 .style("stroke", function() {return node.data.color;});  
 
-            
+            let nodes = svg.selectAll(".nodeArcPath").filter( d => !d.clicked );
+            if (renderer.cycleDetect) {
+                nodes
+                    .style("fill-opacity", opacity.node_hidden);
+            }
+            else {
+                nodes.style("fill-opacity", opacity.node_normal);
+            }
             let links = svg.selectAll(".link");
             /*.filter(function(d) { 
                 let site = {};
@@ -663,8 +719,8 @@ class Render {
 
             svg.selectAll(".link").style("stroke-opacity", 0.1);
             svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
-            svg.selectAll(".siteText").attr("opacity", 0.4);
-            let links = svg.selectAll(".link").filter(function(d) { 
+            svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
+            let links = svg.selectAll(".link").filter( d => { 
                 let siteS = {};
                 let siteT = {};
                 if(d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id) {
@@ -678,14 +734,12 @@ class Render {
                 return d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id;
             });  
 
-            let selfLoops = svg.selectAll(".selfLoop").filter(function(d) { 
+            let selfLoops = svg.selectAll(".selfLoop").filter( d => { 
                 return d.getAgent().id === innerSite.getAgent().id && d.id === innerSite.id;
             });  
 
             links
-                .style("stroke", function(d) {
-                    return data.getNode(d.source.data.parentId).color.brighter();
-                })
+                .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
                 .style("stroke-width", 8)
                 .style("stroke-opacity", 0.75); 
 
@@ -694,8 +748,8 @@ class Render {
                 .style("stroke-width", 8)
                 .style("stroke-opacity", 0.75); 
 
-            targetSites = targetSites.map(function(d) { return data.getSite(d.parentId, d.id); });
-            let targetTexts = svg.selectAll(".siteText").filter(function(d) { return targetSites.includes( d.data );});
+            targetSites = targetSites.map( d => data.getSite(d.parentId, d.id) );
+            let targetTexts = svg.selectAll(".siteText").filter( d => targetSites.includes( d.data ) );
          
             targetTexts
                 .attr("opacity", 1)
@@ -709,7 +763,7 @@ class Render {
             let links = innerSite.links;
             let targetSites = [];
             d3.select(this)
-                .style("stroke", function() {return innerSite.currentColor;});
+                .style("stroke", () => innerSite.currentColor );
 
             renderer.resetLinksAndEdges();
             
@@ -776,6 +830,12 @@ class Render {
         svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 1)
             .style("font-weight", "normal")
             .style("font-size", "110%");
+        
+        if(renderer.cycleDetect) {
+            svg.selectAll(".nodeArcPath").filter(d => !d.clicked)
+                .style("fill-opacity", opacity.node_hidden)
+                .style("stroke-width", 0);
+        }
     }
 
     adjustState(site, circle, hide, text, textMove) {
@@ -791,22 +851,22 @@ class Render {
                 }
             });
             
-            let siteText = this.svg.selectAll(".siteText").filter(function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
+            let siteText = this.svg.selectAll(".siteText").filter( d => { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
             let transform = getTransform(siteText);
             
             if (text) {
                 siteText
-                    .style("font-weight", function() {
+                    .style("font-weight", () => {
                         if (hide) 
                             return "normal";
                         else 
                             return "bold";})
-                    .style("font-size", function() {
+                    .style("font-size", () => {
                         if (hide) 
                             return "110%";
                         else 
                             return "150%";}) 
-                    .attr("transform", function(d) {    let angle = d.data.getAngle();
+                    .attr("transform", d => {    let angle = d.data.getAngle();
                                                         let newX;
                                                         let newY;
                                                         if(textMove) {
@@ -828,12 +888,12 @@ class Render {
 
             if (!hide) {
                 stateLine.selectAll("line")
-                    .attr("x1", function() {return outerRadius + siteLength;} );
+                    .attr("x1", () => outerRadius + siteLength );
                 stateLine.attr("opacity", 1);
             }
             else {
                 stateLine.selectAll("line")
-                .attr("x1", function() {return outerRadius + siteLength;} );
+                .attr("x1", () => outerRadius + siteLength );
                 if (!site.clicked) {
                     stateLine.attr('opacity', 0);   
             }

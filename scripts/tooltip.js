@@ -33,14 +33,14 @@ class UIManager {
             .on("click", showStates);
 
         function toggleCycleDetection() {
-            console.log("checked");
+            //console.log("checked");
             if (d3.select("#cycleCheckbox").property("checked")) {
                 renderer.cycleDetect = true;
-                renderer.rerenderLinks();
+                renderer.rerender();
             }
             else 
                 renderer.cycleDetect = false;
-                renderer.rerenderLinks();
+                renderer.rerender();
         }
 
         function showStates() {
@@ -75,7 +75,7 @@ class UIManager {
             .style("right", 0)		
             .style("top", 0)
             .style("background", d.data.color.brighter())
-            .style("opacity", .4);
+            .style("opacity", 0.4);
         this.tip
             .text("agent: " + d.data.label)
             .style('fill', d.data.color.darker());
@@ -84,6 +84,6 @@ class UIManager {
 
     hide() {
         this.tip
-            .style("opacity", 0) 
+            .style("opacity", 0);
     }
 }

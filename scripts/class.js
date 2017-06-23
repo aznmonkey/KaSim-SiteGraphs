@@ -117,7 +117,6 @@ class Site extends D3Object {
     generateTreeObj() {
         let treeObj = {};
         treeObj.name = this.label;
-        console.log(this.states);
         let childArray = [];
         if(this.states !== undefined) {
             for (let state in this.states) {
@@ -149,6 +148,8 @@ class Node extends D3Object {
     constructor (nodeData) {
         super(nodeData.site_node_name);
         let node = this;
+        this.clicked = 0; // for detect cycle
+        this.side = 0; // for detect cycle
         this.sites = nodeData.site_node_sites.map(function(siteData, i) {
             let site = new Site(siteData, node);
             site.setId(i); 
