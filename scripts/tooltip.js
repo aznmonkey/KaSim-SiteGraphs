@@ -6,13 +6,17 @@ class UIManager {
         this.renderer = renderer;
         this.buttonClicked = 0;
         let UI = this;
+
         this.tip = renderer.root.append("div")	
             .attr("class", "tooltip")	
             .style("font-size", "3em")			
             .style("opacity", 0)
             .style("padding", "0.5em");
 
-        this.cycleDetection = renderer.root.append("div")
+        let toolbox = this.toolbox = renderer.root.append("div")
+            .attr("class", "toolbox");
+
+        this.cycleDetection = toolbox.append("div")
             .attr("class", "checkboxDiv")
             .append('label')
             .text("Interactive Mode")
@@ -21,11 +25,9 @@ class UIManager {
             .attr("type", "checkbox")
             .on("change", toggleCycleDetection);
 
-        this.stateToggle = renderer.root.append("div")
+        this.stateToggle = toolbox.append("div")
             .attr("class", "stateButtonDiv")
-            .style("right" , 0)
-            .style("bottom", 0)
-            .style("padding", "4em")
+            .style("padding", "0.5em")
         .append("input")
             .attr("class", "stateButton")
             .attr("type", "button")
@@ -45,11 +47,11 @@ class UIManager {
 
         function showStates() {
             UI.buttonClicked = UI.buttonClicked === 0 ? 1: 0;
-            let states = renderer.svg.selectAll(".stateLink"); 
+            let states = renderer.svg.selectAll(".stateLink").filter( d => d.states.length > 0 ); 
             //let siteNodes = renderer.svg.selectAll("")
             if (UI.buttonClicked) {
                 states.attr('opacity', 1);
-                renderer.svg.selectAll('.outerSite')
+                renderer.svg.selectAll('.outerSite').filter( d => d.states.length > 0 )
                     .style("fill", function(d) {
                     d.clicked = 1;
                     d.currentColor = "white";
@@ -72,8 +74,6 @@ class UIManager {
     
     show(d) {        
         this.tip
-            .style("right", 0)		
-            .style("top", 0)
             .style("background", d.data.color.brighter())
             .style("opacity", 0.4);
         this.tip

@@ -109,7 +109,7 @@ class Render {
         this.nodew = this.radius/6;
         this.outerRadius = this.radius - this.padding;
         this.innerRadius = this.radius - this.nodew - this.padding;
-        this.siteRadius = 5;
+        this.siteRadius = this.radius/(this.siteList.length) > 7.5 ? 7.5: this.radius/(this.siteList.length);
         this.renderDonut();
         this.renderLinks();
         this.renderSitetoEdgeLinks();
@@ -183,7 +183,7 @@ class Render {
         let hierarchy = this.hierarchy;
         let cluster =  d3.cluster()
             .separation( (a, b) =>  1 )
-            .size([360, innerRadius - siteRadius/2]);
+            .size([360, innerRadius - siteRadius]);
         let line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
             .radius( d => d.y )
@@ -242,10 +242,11 @@ class Render {
                 
                 targetNodes = dedup(targetNodes);
                 let nodes = svg.selectAll(".nodeArcPath").filter( d => targetNodes.includes(  d.data.id ) );
-                nodes
-                    .style("stroke-width", d => { d.clicked = 1; return 5; })
+                
 
                 if(!selectedLink.clicked) {
+                    nodes
+                        .style("stroke-width", d => { d.clicked = 1; return 5; });
                     clickedLink
                         .attr("stroke-width", d => { d.clicked = 1; return 8;} )
                         .style("stroke-opacity", 1);
@@ -257,6 +258,9 @@ class Render {
                     
                 }
                 else {
+                    nodes
+                        .style("stroke-width", d => { d.clicked = 0; return 2; });
+
                     clickedLink
                         .attr("stroke-width", d => { d.clicked = 0; return 8;} )
                         .style("stroke-opacity", 0.4);
@@ -281,6 +285,7 @@ class Render {
                 if(!d.clicked) {
                     let selectedLink = d;
                     let targetNodes = [];
+                    let sideNodes = [];
                     let sideLinks = svg.selectAll(".link").filter( d => ((selectedLink.target.data.parentId === d.source.data.parentId) &&
                                                                         ((selectedLink.target.data.id != d.source.data.id) &&
                                                                         (selectedLink.source.data.id != d.target.data.id)) ||
@@ -295,12 +300,17 @@ class Render {
                     targetNodes.push(d.target.data.parentId);
                     targetNodes.push(d.source.data.parentId);
                     for (let link in sideLinks.data()) {
-                        targetNodes.push(sideLinks.data()[link].target.data.parentId);
-                        targetNodes.push(sideLinks.data()[link].source.data.parentId);
+                        sideNodes.push(sideLinks.data()[link].target.data.parentId);
+                        sideNodes.push(sideLinks.data()[link].source.data.parentId);
                     }
 
                     targetNodes = dedup(targetNodes);
                     //console.log(targetNodes);
+                    let snodes = svg.selectAll(".nodeArcPath").filter( d => sideNodes.includes(  d.data.id ) );
+                    snodes
+                        .style("stroke-width", 5)
+                        .style("stroke", d =>  d.data.color.darker(1) );
+
                     let nodes = svg.selectAll(".nodeArcPath").filter( d => targetNodes.includes(  d.data.id ) );
                     nodes
                         .style("stroke-width", 5)
@@ -334,7 +344,7 @@ class Render {
     }
 
     renderSitetoEdgeLinks() {
-        let siteRadius = 5;
+        let siteRadius = this.siteRadius;
         let siteLine = this.svg.selectAll('.site')
             .data(this.siteList)
         .enter().append('g')
@@ -351,13 +361,16 @@ class Render {
     }
 
     renderStates() {
-        let lineLength = this.radius/4;   
+        let siteRadius = this.siteRadius;
+        let lineScale = this.radius/60;
+        let lineLength;   
         let width = this.width;
         let height = this.height;
         let outerRadius = this.outerRadius;
+        let siteNum = this.siteList.length;
         for (let sIndex in this.siteList) {
             let site = this.siteList[sIndex];
-            let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.2;
+            let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.label === site.label && d.data.agent.label === site.agent.label ;}).node().getComputedTextLength() * 1.1;
                 let gState = this.svg.selectAll('.stateLink')
                     .data(this.siteList);
 
@@ -374,16 +387,19 @@ class Render {
                         .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
                         .attr('stroke','black')
                         .attr('stroke-width', 2)
-                        .attr('x1', this.outerRadius + textLength)
-                        .attr('x2', this.outerRadius + textLength + (lineLength - textLength))
+                        .attr('x1', this.outerRadius + siteRadius + textLength)
+                        .attr('x2', d => {
+                            lineLength = lineScale * site.states.length + lineScale/4 * siteNum;
+                            return outerRadius + siteRadius + textLength + (lineLength - textLength);
+                        })
                         .transition();
 
                     let stateArc = d3.arc()
-                            .outerRadius(this.outerRadius + textLength + (lineLength - textLength) + 2 )
-                            .innerRadius(this.outerRadius + textLength + (lineLength - textLength))
+                            .outerRadius(this.outerRadius + siteRadius + textLength + (lineLength - textLength) + 1.5 )
+                            .innerRadius(this.outerRadius + siteRadius + textLength + (lineLength - textLength))
                             .startAngle( d => d.startAngle )
                             .endAngle( d => d.endAngle )
-                            .padAngle(Math.PI/200);
+                            .padAngle(Math.PI/(10 * siteNum));
             
                     
                     stateLine.append('path')
@@ -406,7 +422,7 @@ class Render {
                                 .style("fill", "black")
                                 .style('font-size', '110%')
                                 .attr("transform", d => {
-                                    let r = (outerRadius + textLength + (lineLength - textLength) + 10);
+                                    let r = (outerRadius + textLength + siteRadius + (lineLength - textLength) + 10);
                                     
                                     let offset = (d.endAngle - d.startAngle)/(site.states.length + 1);
                                     let angle = d.startAngle + 3/2 * Math.PI + (state) * offset + offset;
@@ -453,8 +469,8 @@ class Render {
                     .innerRadius((outerRadius + innerRadius) / 2);
         
         let siteArc = d3.arc()
-                    .outerRadius(outerRadius + paddingSite)
-                    .innerRadius(outerRadius );
+                    .outerRadius(outerRadius + siteRadius + paddingSite)
+                    .innerRadius(outerRadius + siteRadius) ;
                     
 
         let node = d3.pie() 
@@ -626,7 +642,7 @@ class Render {
                 .style("stroke-width", 5)
                 .style("stroke", () =>  node.data.color.darker(1) );
 
-            svg.selectAll(".link").style("stroke-opacity", 0.1);
+            svg.selectAll(".link").style("stroke-opacity", d => { if (d.clicked) return 0.8; else return 0.1; });
             svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
             svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
             svg.selectAll(".nodeArcPath").style("fill-opacity", opacity.node_hidden);
@@ -660,12 +676,13 @@ class Render {
             links
                 .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
                 .style("stroke-width", 8)
-                .style("stroke-opacity", 0.75);  
+                .style("stroke-opacity", 0.8)
+                .raise();  
 
             selfLoops
                 .style("stroke", node.data.color.brighter())
                 .style("stroke-width", 8)
-                .style("stroke-opacity", 0.75); 
+                .style("stroke-opacity", 0.8); 
 
             tip.show(node);
         
@@ -675,17 +692,12 @@ class Render {
             let node = d;   
             let sites = node.data.listSites();
             let targetSites = []; 
-            d3.select(this)
-                .style("stroke-width", 0)
-                .style("stroke", function() {return node.data.color;});  
-
+            
             let nodes = svg.selectAll(".nodeArcPath").filter( d => !d.clicked );
-            if (renderer.cycleDetect) {
+            if (!renderer.cycleDetect) {
                 nodes
-                    .style("fill-opacity", opacity.node_hidden);
-            }
-            else {
-                nodes.style("fill-opacity", opacity.node_normal);
+                    .style("fill-opacity", opacity.node_normal)
+                    .style("stroke-width", 0);
             }
             let links = svg.selectAll(".link");
             /*.filter(function(d) { 
@@ -712,7 +724,7 @@ class Render {
 
         function mouseoverInnerSite(d) {
             let event = this;
-            let innerSite = d;;
+            let innerSite = d;
             let targetSites = [];
             d3.select(this)
                 .style("stroke", function() {return innerSite.currentColor.darker(1);});
@@ -832,13 +844,14 @@ class Render {
             .style("font-size", "110%");
         
         if(renderer.cycleDetect) {
-            svg.selectAll(".nodeArcPath").filter(d => !d.clicked)
-                .style("fill-opacity", opacity.node_hidden)
-                .style("stroke-width", 0);
+            svg.selectAll(".nodeArcPath")
+                .style("fill-opacity", d => { if ( d.clicked ) return opacity.node_normal; else return opacity.node_hidden;} )
+                .style("stroke-width", d => { if ( d.clicked ) return 5; else return 0; } );
         }
     }
 
     adjustState(site, circle, hide, text, textMove) {
+        let paddingSite = calculateTextWidth("150%") * 2;
         let siteRadius = this.siteRadius;
         let outerRadius = this.outerRadius;
         d3.select(circle).style("fill", function() {                
@@ -870,12 +883,12 @@ class Render {
                                                         let newX;
                                                         let newY;
                                                         if(textMove) {
-                                                            newX = (parseFloat(transform.translate[0]) + 1.25 * siteRadius  * Math.cos(angle));
-                                                            newY = (parseFloat(transform.translate[1]) + 1.25 * siteRadius  * Math.sin(angle));
+                                                            newX = (parseFloat(transform.translate[0]) + ( 1.5 * siteRadius  ) * Math.cos(angle));
+                                                            newY = (parseFloat(transform.translate[1]) + ( 1.5 * siteRadius  ) * Math.sin(angle));
                                                         }
                                                         else {
-                                                            newX = (parseFloat(transform.translate[0]) - 1.25 * siteRadius  * Math.cos(angle));
-                                                            newY = (parseFloat(transform.translate[1]) - 1.25 * siteRadius  * Math.sin(angle));
+                                                            newX = (parseFloat(transform.translate[0]) - ( 1.5 * siteRadius  ) * Math.cos(angle));
+                                                            newY = (parseFloat(transform.translate[1]) - ( 1.5 * siteRadius  ) * Math.sin(angle));
                                                         }
                                                         return "translate(" +  newX +
                                                         ","  + newY +
@@ -884,16 +897,16 @@ class Render {
             }
 
             let stateLine = d3.select("#stateLink" + site.agent.id + site.id);
-            let siteLength = siteText.node().getComputedTextLength() * 1.2 + this.radius/30;
+            let siteLength = siteText.node().getComputedTextLength() * 1.1 + this.radius/30;
 
             if (!hide) {
                 stateLine.selectAll("line")
-                    .attr("x1", () => outerRadius + siteLength );
+                    .attr("x1", () => outerRadius + siteLength + 2.5 * siteRadius);
                 stateLine.attr("opacity", 1);
             }
             else {
                 stateLine.selectAll("line")
-                .attr("x1", () => outerRadius + siteLength );
+                .attr("x1", () => outerRadius + siteLength + siteRadius);
                 if (!site.clicked) {
                     stateLine.attr('opacity', 0);   
             }
