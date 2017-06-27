@@ -16,14 +16,14 @@ class UIManager {
         let toolbox = this.toolbox = renderer.root.append("div")
             .attr("class", "toolbox");
 
-        this.cycleDetection = toolbox.append("div")
-            .attr("class", "checkboxDiv")
-            .append('label')
-            .text("Interactive Mode")
-        .append("input")
+        toolbox.append("input")
             .attr("id", "cycleCheckbox")
             .attr("type", "checkbox")
             .on("change", toggleCycleDetection);
+        toolbox.append('label')
+            .attr('for', 'cycleCheckbox')
+            .text("Interactive Mode");
+
 
         this.stateToggle = toolbox.append("div")
             .attr("class", "stateButtonDiv")

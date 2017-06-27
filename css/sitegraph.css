@@ -2,6 +2,8 @@ body {
   margin:0;
   -moz-osx-font-smoothing:grayscale;
   -webkit-font-smoothing:antialiased;
+  color:#444;
+  font: 14px helvetica, arial, sans-serif;
 }
 
 .link {
@@ -25,21 +27,33 @@ body {
 }
 .toolbox {
   position: absolute;
-  border: 0px;
-  border-radius: 8px;
   bottom: 0;
   right : 0;
-  text-align: right;
-  padding: 5%;
+  text-align:center;
+  padding:10px;
 }
 
 .stateButton {
-    background-color: #4CAF50; /* Green */
-    border: none;
-    color: white;
-    padding: 10px 10px;
+    background-color: rgba(182, 255, 165, 0.5);
+    border: 1px solid #4CAF50;
+    border-radius:6px;
+    color: #333;
+    cursor:pointer;
+    padding: 10px 14px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 16px;
+    font-size: 14px;
+    outline:none;
+    margin-top:10px;
+}
+.stateButton:hover {
+  background-color: rgb(182,255,165);
+}
+
+#cycleCheckbox {
+
+}
+#cycleCheckbox + label {
+  margin-left:5px;
 }
