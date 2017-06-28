@@ -63,17 +63,28 @@ class Render {
         //console.log(layout);
         /* create svg to draw contact maps on */
           // tooltip
+        let svgWidth = width +
+                            this.layout.margin.left +
+                            this.layout.margin.right;
+        let svgHeight = height +
+                            this.layout.margin.top +
+                            this.layout.margin.bottom;
         let container = this.root
+            .append("div")
+            .classed("render-container", true)
             .append("svg")
             .attr("class", "svg-group")
             .attr("id", "map-container")
+            /*
             .attr("width", width +
                             this.layout.margin.left +
                             this.layout.margin.right)
             .attr("height", height +
                             this.layout.margin.top +
-                            this.layout.margin.bottom);
-        
+                            this.layout.margin.bottom); 
+            */
+            .attr("preserveAspectRatio", "xMinYMin meet")
+            .attr("viewBox", "0 0 " + svgWidth + " " + svgHeight );
          this.svg = container.append('g')
                 .attr('transform', 'translate(' + [width/2, height/2] + ')')
                 .append('g');
@@ -98,8 +109,9 @@ class Render {
         }
 
         let tip = this.tip = new UIManager(this);
-        
-    }
+        this.cycleDetect = false;
+        this.toggleLines = false;
+    }   
 
     render() {
         this.width = this.layout.dimension.width;
@@ -109,7 +121,7 @@ class Render {
         this.nodew = this.radius/6;
         this.outerRadius = this.radius - this.padding;
         this.innerRadius = this.radius - this.nodew - this.padding;
-        this.siteRadius = this.radius/(this.siteList.length) > 7.5 ? 7.5: this.radius/(this.siteList.length);
+        this.siteRadius = 1.5 * this.radius/(this.siteList.length) > 6 ? 6: 1.5 * this.radius/(this.siteList.length);
         this.renderDonut();
         this.renderLinks();
         this.renderSitetoEdgeLinks();
@@ -157,7 +169,7 @@ class Render {
         let renderer = this;
         let svg = this.svg;
         if(renderer.cycleDetect === true ) {
-            svg.selectAll('.link').style("stroke-opacity", 0.1);
+            svg.selectAll('.link').style("stroke-opacity", opacity.line_hidden);
             return;
         }
         else {
@@ -183,7 +195,7 @@ class Render {
         let hierarchy = this.hierarchy;
         let cluster =  d3.cluster()
             .separation( (a, b) =>  1 )
-            .size([360, innerRadius - siteRadius]);
+            .size([360, innerRadius - siteRadius + 2]);
         let line = d3.radialLine()
             .curve(d3.curveBundle.beta(0.85))
             .radius( d => d.y )
@@ -199,7 +211,7 @@ class Render {
             .attr("d", line)
             .attr("stroke", "steelblue")
             .attr("stroke-width", 2)
-            .style("stroke-opacity", 0.4)
+            .style("stroke-opacity", opacity.line_normal)
             .on("mouseover", mouseoverLink)
             .on("mouseout", mouseoutLink)
             .on("click", clickLink);
@@ -221,7 +233,6 @@ class Render {
 
         function clickLink(d) {
             if (renderer.cycleDetect) {
-                
                 let selectedLink = d;
                 let targetNodes = [];
                 let clickedLink = d3.select(this);
@@ -231,12 +242,17 @@ class Render {
                                                                             d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId && 
                                                                             d.data.id === selectedLink.source.data.id));
 
-                let sideLinks = svg.selectAll(".link").filter(d => ((selectedLink.target.data.parentId === d.source.data.parentId) &&
-                                                                        ((selectedLink.target.data.id != d.source.data.id) &&
-                                                                        (selectedLink.source.data.id != d.target.data.id)) ||
-                                                                        (selectedLink.source.data.parentId === d.source.data.parentId) &&
-                                                                        ((selectedLink.source.data.id != d.source.data.id))));
-                
+                let sideLinks = svg.selectAll(".link").filter( d => (
+                                                                        ((selectedLink.target.data.parentId === d.source.data.parentId) &&
+                                                                        ((selectedLink.target.data.id != d.source.data.id) && (selectedLink.source.data.id != d.target.data.id))) ||
+                                                                        ((selectedLink.source.data.parentId === d.source.data.parentId) &&
+                                                                        (selectedLink.source.data.id != d.source.data.id) && ((selectedLink.target.data.id != d.target.data.id) || (selectedLink.target.data.parentId !== d.target.data.parentId))) ||
+                                                                        ((selectedLink.source.data.parentId == d.target.data.parentId) &&
+                                                                        (selectedLink.source.data.id != d.target.data.id) && (selectedLink.target.data.id != d.source.data.id))  ||
+                                                                        ((selectedLink.target.data.parentId == d.target.data.parentId) &&
+                                                                        (selectedLink.target.data.id != d.target.data.id) && ((selectedLink.source.data.id != d.source.data.id) || (selectedLink.source.data.parentId !== d.source.data.parentId)))
+                                                                    )
+                                                             );
                 targetNodes.push(d.target.data.parentId);
                 targetNodes.push(d.source.data.parentId);
                 
@@ -251,8 +267,9 @@ class Render {
                         .attr("stroke-width", d => { d.clicked = 1; return 8;} )
                         .style("stroke-opacity", 1);
                     sideLinks
-                        .attr("stroke-width", d => { d.side = 1; return 8;} )
-                        .style("stroke-opacity", d => { if (d.clicked) return 1; else return 0.2; } );
+                        .attr("stroke-width", d => { d.side = 1; if (d.clicked) return 8; else return renderer.toggleLines ? 2: 8;  } )
+                        .style("stroke-opacity", d => { if (d.clicked) return opacity.line_highlight; else return renderer.toggleLines ? opacity.line_hidden: opacity.line_side; } )
+                        .style("stroke", "grey");
                     targetTexts
                         .classed("siteText--normal", false);
                     
@@ -263,11 +280,11 @@ class Render {
 
                     clickedLink
                         .attr("stroke-width", d => { d.clicked = 0; return 8;} )
-                        .style("stroke-opacity", 0.4);
+                        .style("stroke-opacity", opacity.line_normal);
             
                     sideLinks
                         .attr("stroke-width", d => { d.side = 0; if( d.clicked) return 8; else return 2; } )
-                        .style("stroke-opacity", d => { if (d.clicked) return 0.9; else return 0.2; } );
+                        .style("stroke-opacity", d => { if (d.clicked) return opacity.line_highlight; else return renderer.toggleLines ? opacity.line_hidden: opacity.line_side; } );
     
                     targetTexts
                         .classed("siteText--normal", true);
@@ -278,20 +295,25 @@ class Render {
         }
         function mouseoverLink(d) {
             if (renderer.cycleDetect) {
-                    svg.selectAll(".link").style("stroke-opacity", d => { if(d.clicked) return 0.8; else if(d.side) return 0.2; else return 0.1; });
-                    svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
-                    svg.selectAll(".siteText").filter(".siteText-normal").attr("opacity", 0.4);
+                    svg.selectAll(".link").style("stroke-opacity", d => { if(d.clicked) return opacity.line_highlight; else if(d.side) return opacity.line_side; else return opacity.line_hidden; });
+                    svg.selectAll(".selfLoop").style("stroke-opacity", opacity.line_hidden);
+                    svg.selectAll(".siteText").filter(".siteText-normal").attr("opacity", opacity.line_normal);
 
                 if(!d.clicked) {
                     let selectedLink = d;
                     let targetNodes = [];
                     let sideNodes = [];
-                    let sideLinks = svg.selectAll(".link").filter( d => ((selectedLink.target.data.parentId === d.source.data.parentId) &&
-                                                                        ((selectedLink.target.data.id != d.source.data.id) &&
-                                                                        (selectedLink.source.data.id != d.target.data.id)) ||
-                                        
-                                                                        (selectedLink.source.data.parentId === d.source.data.parentId) &&
-                                                                        ((selectedLink.source.data.id != d.source.data.id))) );
+                    let sideLinks = svg.selectAll(".link").filter( d => (
+                                                                            ((selectedLink.target.data.parentId === d.source.data.parentId) &&
+                                                                            ((selectedLink.target.data.id != d.source.data.id) && (selectedLink.source.data.id != d.target.data.id))) ||
+                                                                            ((selectedLink.source.data.parentId === d.source.data.parentId) &&
+                                                                            (selectedLink.source.data.id != d.source.data.id) && ((selectedLink.target.data.id != d.target.data.id) || (selectedLink.target.data.parentId !== d.target.data.parentId))) ||
+                                                                            ((selectedLink.source.data.parentId == d.target.data.parentId) &&
+                                                                            (selectedLink.source.data.id != d.target.data.id) && (selectedLink.target.data.id != d.source.data.id))  ||
+                                                                            ((selectedLink.target.data.parentId == d.target.data.parentId) &&
+                                                                            (selectedLink.target.data.id != d.target.data.id) && ((selectedLink.source.data.id != d.source.data.id) || (selectedLink.source.data.parentId !== d.source.data.parentId)))
+                                                                        )
+                                                                  );
                         
                     let targetTexts = svg.selectAll(".siteText").filter( d => (d.data.getAgent().id === selectedLink.target.data.parentId &&
                                                                                 d.data.id === selectedLink.target.data.id) || (d.data.getAgent().id === selectedLink.source.data.parentId &&
@@ -309,22 +331,24 @@ class Render {
                     let snodes = svg.selectAll(".nodeArcPath").filter( d => sideNodes.includes(  d.data.id ) );
                     snodes
                         .style("stroke-width", 5)
-                        .style("stroke", d =>  d.data.color.darker(1) );
+                        .style("stroke", d =>  d.data.color.darker(0.5) );
 
                     let nodes = svg.selectAll(".nodeArcPath").filter( d => targetNodes.includes(  d.data.id ) );
                     nodes
-                        .style("stroke-width", 5)
-                        .style("stroke", d =>  d.data.color.darker(1) )
+                        .style("stroke-width", 15)
+                        .style("stroke", d =>  d.data.color.darker(0.5) )
                         .style("fill-opacity", opacity.node_normal);
                     
                     sideLinks
-                        .style("stroke-opacity", 0.2)
-                        .style("stroke-width", 8);
-            
+                        .style("stroke-opacity", d => d.clicked ? opacity.line_highlight: opacity.line_side)
+                        .style("stroke-width", 8)
+                        .style("stroke", d => d.clicked ? "steelblue": "grey");
+
                     
                     d3.select(this)
-                        .style("stroke-opacity", 0.8)
-                        .style("stroke-width", 8);
+                        .style("stroke-opacity", opacity.line_highlight)
+                        .style("stroke-width", 8)
+                        .style("stroke", "steelblue");
         
 
                     targetTexts
@@ -357,7 +381,8 @@ class Render {
             .attr('stroke-dasharray', [2,2])
             .attr('stroke-width', 2)
             .attr('x1', this.innerRadius + siteRadius)
-            .attr('x2', this.outerRadius - siteRadius);
+            .attr('x2', this.outerRadius - siteRadius)
+            .style('pointer-events', 'none');
     }
 
     renderStates() {
@@ -385,11 +410,11 @@ class Render {
                 if (site.states.length > 0) { 
                     stateLine.append('line')
                         .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')')
-                        .attr('stroke','black')
+                        .attr('stroke', d => site.agent.color.darker() )
                         .attr('stroke-width', 2)
                         .attr('x1', this.outerRadius + siteRadius + textLength)
                         .attr('x2', d => {
-                            lineLength = lineScale * site.states.length + lineScale/4 * siteNum;
+                            lineLength = lineScale * 3 * site.states.length + lineScale/8 * siteNum;
                             return outerRadius + siteRadius + textLength + (lineLength - textLength);
                         })
                         .transition();
@@ -404,7 +429,7 @@ class Render {
                     
                     stateLine.append('path')
                         .attr("d", stateArc)
-                        .style("fill", "black");
+                        .style("fill", d => site.agent.color.darker() );
 
                     
                     
@@ -419,7 +444,7 @@ class Render {
                                     })
                                 .attr("class", "stateText")
                                 .attr('alignment-baseline', "middle")
-                                .style("fill", "black")
+                                .style("fill", d => site.agent.color.darker() )
                                 .style('font-size', '110%')
                                 .attr("transform", d => {
                                     let r = (outerRadius + textLength + siteRadius + (lineLength - textLength) + 10);
@@ -535,6 +560,7 @@ class Render {
             .style("text-anchor", "middle")
 			.style('font-size', "110%")
             .style("fill", function(d,i) { return d.data.color.darker(2);})
+            .style('pointer-events', 'none')
             .text(function(d) { 
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
@@ -642,7 +668,7 @@ class Render {
                 .style("stroke-width", 5)
                 .style("stroke", () =>  node.data.color.darker(1) );
 
-            svg.selectAll(".link").style("stroke-opacity", d => { if (d.clicked) return 0.8; else return 0.1; });
+            svg.selectAll(".link").style("stroke-opacity", d => { if (d.clicked) return opacity.line_highlight; else return opacity.line_hidden; });
             svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
             svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
             svg.selectAll(".nodeArcPath").style("fill-opacity", opacity.node_hidden);
@@ -676,15 +702,15 @@ class Render {
             links
                 .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
                 .style("stroke-width", 8)
-                .style("stroke-opacity", 0.8)
+                .style("stroke-opacity", opacity.line_highlight)
                 .raise();  
 
             selfLoops
                 .style("stroke", node.data.color.brighter())
                 .style("stroke-width", 8)
-                .style("stroke-opacity", 0.8); 
+                .style("stroke-opacity", opacity.line_highlight); 
 
-            tip.show(node);
+            tip.showNode(node);
         
         }
 
@@ -723,72 +749,80 @@ class Render {
         }
 
         function mouseoverInnerSite(d) {
-            let event = this;
-            let innerSite = d;
-            let targetSites = [];
-            d3.select(this)
-                .style("stroke", function() {return innerSite.currentColor.darker(1);});
-
-            svg.selectAll(".link").style("stroke-opacity", 0.1);
-            svg.selectAll(".selfLoop").style("stroke-opacity", 0.1);
-            svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
-            let links = svg.selectAll(".link").filter( d => { 
-                let siteS = {};
-                let siteT = {};
-                if(d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id) {
-                    siteT.id = d.target.data.id ;
-                    siteT.parentId = d.target.data.parentId;
-                    siteS.id = d.source.data.id ;
-                    siteS.parentId = d.source.data.parentId;
-                    targetSites.push(siteS);
-                    targetSites.push(siteT);  
+            if(d.links.length > 0) {
+                let event = this;
+                let innerSite = d;
+                let targetSites = [];
+                if(d == null) {
+                    return;
                 }
-                return d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id;
-            });  
+                d3.select(this)
+                    .style("stroke", function() {return innerSite.currentColor.darker(1);});
 
-            let selfLoops = svg.selectAll(".selfLoop").filter( d => { 
-                return d.getAgent().id === innerSite.getAgent().id && d.id === innerSite.id;
-            });  
+                svg.selectAll(".link").style("stroke-opacity", opacity.line_hidden);
+                svg.selectAll(".selfLoop").style("stroke-opacity", opacity.line_hidden);
+                svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
+                let links = svg.selectAll(".link").filter( d => { 
+                    let siteS = {};
+                    let siteT = {};
+                    if(d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id) {
+                        siteT.id = d.target.data.id ;
+                        siteT.parentId = d.target.data.parentId;
+                        siteS.id = d.source.data.id ;
+                        siteS.parentId = d.source.data.parentId;
+                        targetSites.push(siteS);
+                        targetSites.push(siteT);  
+                    }
+                    return d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id;
+                });  
 
-            links
-                .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
-                .style("stroke-width", 8)
-                .style("stroke-opacity", 0.75); 
+                let selfLoops = svg.selectAll(".selfLoop").filter( d => { 
+                    return d.getAgent().id === innerSite.getAgent().id && d.id === innerSite.id;
+                });  
 
-            selfLoops
-                .style("stroke", innerSite.getAgent().color.brighter())
-                .style("stroke-width", 8)
-                .style("stroke-opacity", 0.75); 
+                links
+                    .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
+                    .style("stroke-width", 8)
+                    .style("stroke-opacity", opacity.line_highlight); 
 
-            targetSites = targetSites.map( d => data.getSite(d.parentId, d.id) );
-            let targetTexts = svg.selectAll(".siteText").filter( d => targetSites.includes( d.data ) );
-         
-            targetTexts
-                .attr("opacity", 1)
-                .style("font-weight", "bold")
-                .style("font-size", "150%");
+                selfLoops
+                    .style("stroke", innerSite.getAgent().color.brighter())
+                    .style("stroke-width", 8)
+                    .style("stroke-opacity", opacity.line_highlight); 
+
+                targetSites = targetSites.map( d => data.getSite(d.parentId, d.id) );
+                let targetTexts = svg.selectAll(".siteText").filter( d => targetSites.includes( d.data ) );
+            
+                targetTexts
+                    .attr("opacity", 1)
+                    .style("font-weight", "bold")
+                    .style("font-size", "150%");
+            }
         }
 
         function mouseoutInnerSite(d) {
-            let event = this;
-            let innerSite = d;
-            let links = innerSite.links;
-            let targetSites = [];
-            d3.select(this)
-                .style("stroke", () => innerSite.currentColor );
+            if(d.links.length > 0) {
+                let event = this;
+                let innerSite = d;
+                let links = innerSite.links;
+                let targetSites = [];
+                d3.select(this)
+                    .style("stroke", () => innerSite.currentColor );
 
-            renderer.resetLinksAndEdges();
-            
+                renderer.resetLinksAndEdges();
+            }
         }
 
         function mouseoverSite(d) {
             let site = d;   
             //console.log(this);
+            tip.showSite(site);
             renderer.adjustState(site, this, false, true, true);            
         }
 
         function mouseoutSite(d) {
-            let site = d;           
+            let site = d;          
+            tip.hide(); 
             renderer.adjustState(site, this, true, true, false);    
         }
 
@@ -815,30 +849,34 @@ class Render {
         let svg = this.svg;
         let renderer = this;
         svg.selectAll('.link')
-            .style("stroke", "steelblue")
+            .style("stroke", d => !d.clicked && d.side ? "grey" : "steelblue")
             .style("stroke-width", d => { 
-                if(d.clicked || d.side) 
+                if(d.clicked) 
                     return 8; 
-                else 
-                    return 2; 
-                })
+                else {
+                    if (d.side && !renderer.toggleLines)
+                        return 8;
+                    else
+                        return 2; 
+                }
+            })
             .style("stroke-opacity",d => { 
                 if (renderer.cycleDetect) {
                     if(d.clicked) 
-                        return 0.9;
-                    else if(d.side) 
-                        return 0.2;
+                        return opacity.line_highlight;
+                    else if(d.side && !renderer.toggleLines) 
+                        return opacity.line_side;
                     else 
-                     return 0.1; 
+                        return opacity.line_hidden; 
                 }
                 else {
-                    return 0.4;
+                    return opacity.line_normal;
                 }
             });
         svg.selectAll(".selfLoop")
             .style("stroke", "steelblue")
             .style("stroke-width", 2)
-            .style("stroke-opacity", d =>  {if (renderer.cycleDetect) return 0.1; else return 0.4; });
+            .style("stroke-opacity", d =>  {if (renderer.cycleDetect) return opacity.line_hidden; else return opacity.line_normal; });
         svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 1)
             .style("font-weight", "normal")
             .style("font-size", "110%");

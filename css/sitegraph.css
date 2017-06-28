@@ -6,6 +6,7 @@ body {
   font: 14px helvetica, arial, sans-serif;
 }
 
+
 .link {
   stroke: steelblue;
   stroke-opacity: 0.4;
@@ -24,6 +25,8 @@ body {
   position: absolute;
   top: 0;
   right: 0;
+  white-space: pre;
+  text-align: right;
 }
 .toolbox {
   position: absolute;
@@ -47,6 +50,7 @@ body {
     outline:none;
     margin-top:10px;
 }
+
 .stateButton:hover {
   background-color: rgb(182,255,165);
 }
@@ -56,4 +60,25 @@ body {
 }
 #cycleCheckbox + label {
   margin-left:5px;
+  margin-right:5px;
+}
+
+#toggleLines {
+
+}
+#toggleLines + label {
+  margin-left:5px;
+}
+
+#toggleLines[disabled] + label {
+  color: #ccc;
+}
+
+.render-container {
+    display: inline-block;
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* aspect ratio */
+    vertical-align: top;
+    overflow: hidden;
 }
