@@ -206,7 +206,7 @@ class Render {
         let links = svg.selectAll('.link')
             .data(data.packageLinks(hierarchy.leaves()))
         .enter().append("path")
-            .each(d => { d.clicked = 0; d.source = d[0], d.target = d[d.length - 1]; })
+            .each(d => { d.clicked = 0; d.side = 0; d.source = d[0], d.target = d[d.length - 1]; })
             .attr("class", "link")
             .attr("d", line)
             .attr("stroke", "steelblue")
@@ -267,7 +267,7 @@ class Render {
                         .attr("stroke-width", d => { d.clicked = 1; return 8;} )
                         .style("stroke-opacity", 1);
                     sideLinks
-                        .attr("stroke-width", d => { d.side = 1; if (d.clicked) return 8; else return renderer.toggleLines ? 2: 8;  } )
+                        .attr("stroke-width", d => { d.side += 1; if (d.clicked) return 8; else return renderer.toggleLines ? 2: 8;  } )
                         .style("stroke-opacity", d => { if (d.clicked) return opacity.line_highlight; else return renderer.toggleLines ? opacity.line_hidden: opacity.line_side; } )
                         .style("stroke", "grey");
                     targetTexts
@@ -283,7 +283,7 @@ class Render {
                         .style("stroke-opacity", opacity.line_normal);
             
                     sideLinks
-                        .attr("stroke-width", d => { d.side = 0; if( d.clicked) return 8; else return 2; } )
+                        .attr("stroke-width", d => { d.side -= 1; if( d.clicked) return 8; else return 2; } )
                         .style("stroke-opacity", d => { if (d.clicked) return opacity.line_highlight; else return renderer.toggleLines ? opacity.line_hidden: opacity.line_side; } );
     
                     targetTexts
@@ -851,6 +851,7 @@ class Render {
         svg.selectAll('.link')
             .style("stroke", d => !d.clicked && d.side ? "grey" : "steelblue")
             .style("stroke-width", d => { 
+                console.log(d.clicked)
                 if(d.clicked) 
                     return 8; 
                 else {
