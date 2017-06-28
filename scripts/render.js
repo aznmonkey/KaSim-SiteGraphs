@@ -262,7 +262,7 @@ class Render {
 
                 if(!selectedLink.clicked) {
                     nodes
-                        .style("stroke-width", d => { d.clicked = 1; return 5; });
+                        .style("stroke-width", d => { d.clicked += 1; return 5; });
                     clickedLink
                         .attr("stroke-width", d => { d.clicked = 1; return 8;} )
                         .style("stroke-opacity", 1);
@@ -276,7 +276,7 @@ class Render {
                 }
                 else {
                     nodes
-                        .style("stroke-width", d => { d.clicked = 0; return 2; });
+                        .style("stroke-width", d => { d.clicked -= 1; return 2; });
 
                     clickedLink
                         .attr("stroke-width", d => { d.clicked = 0; return 8;} )
@@ -532,6 +532,7 @@ class Render {
             .attr("d", nodeArc)
             //.attr("id", function(d,i) { return "nodeArc_" + i;})
             .style("fill", function(d,i) { 
+                d.clicked = 0;
                 d.data.color = d3.rgb(c20(i)).darker(1);
                 return d3.rgb(c20(i)).brighter(0.5);})
             .on("mouseover", mouseoverNode)
@@ -851,7 +852,6 @@ class Render {
         svg.selectAll('.link')
             .style("stroke", d => !d.clicked && d.side ? "grey" : "steelblue")
             .style("stroke-width", d => { 
-                console.log(d.clicked)
                 if(d.clicked) 
                     return 8; 
                 else {
