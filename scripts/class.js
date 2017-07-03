@@ -19,155 +19,19 @@ class Dimension {
     }
 
     update(dimension) {
-        console.log(dimension);
         this.height = dimension.height;
         this.width = dimension.width;
     }
 
-    toPoint() {
-        return new Point(this.width, this.height);
-    }
-
-    larger(dimension) {
-        let result =
-        (this.height > dimension.height) &&
-            (this.width > dimension.width);
-        return result;
-    }
-
-    min(dimension) {
-        let minWidth = (this.width < dimension.width) ? this.width : dimension.width;
-        let minHeight = (this.height < dimension.height) ? this.height : dimension.height;
-        return new Dimension(minWidth, minHeight);
-    }
-
-    max(dimension) {
-        let maxWidth = (this.width > dimension.width) ? this.width : dimension.width;
-        let maxHeight = (this.height > dimension.height) ? this.height : dimension.height;
-        return new Dimension(minWidth, minHeight);
-    }
-
-    getSquare() {
-        let size = Math.max(this.width, this.height);
-        return new Dimension(size, size);
-    }
-
-    getArea() {
-        return this.width * this.height;
-    }
-
-    clone() {
-        let clone = new Dimension(this.x, this.y);
-        clone.addLabel(this.label);
-        return clone;
-    }
     
-}
-
-class Point {
-    constructor (x, y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    distance([point]) {
-        return Math.sqrt(((this.x - point.x)*(this.x - point.x)) +
-                         ((this.y - point.y)*(this.y - point.y)));
-    }
-
-    magnitude(){
-        return this.distance(new Point(0,0));
-    }
-
-    translate(point, type) {
-        if (type === translate.ADD || type === null) {
-            this.x += point.x;
-            this.y += point.y;
-        } 
-        else if (type === translate.SUBTRACT) {
-            this.x -= point.x;
-            this.y -= point.y;
-        }
-    }
-
-    scale(s) {
-        this.x *= s; 
-        this.y *= s;
-    }
-
-    middle(point) {
-        this.translate(point, translate.ADD).scale(0.5);
-    }
-
-    /**
-     * Return a point with unit magnitude.
-     */
-    normalize(){
-        this.scale(1.0/this.magnitude());
-    }
-
-    update(point){
-        this.x = point.x;
-        this.y = point.y;
-    }
-
-    /**
-     * Find the nearest neighbor and the penality
-     * for not choosing the nearest neighbor.
-     */
-    nearest(neighbors){
-        if(neighbors.length === 0){
-            throw "no neighbors";
-        } else if (neighbors.length === 1){
-            let neighbor = neighbors[0];
-            return { nearest : neighbor,
-                     penalty : 0,
-                     distance : this.distance(neighbor) };
-        } else {
-            let neighbor = neighbors[0];
-            let r = this.nearest(neighbors.slice(1));
-            let distance = this.distance(neighbor);
-            if(distance < r.distance){
-                return { nearest : neighbor,
-                    penalty : r.distance - distance,
-                    distance : distance };
-            } else { 
-                return r; 
-            }
-        }
-    }
-    
-    /* counter clockwise rotation*/
-    r90(){
-        this.update(new Point(-1.0 * this.y,this.x));
-    }
-    
-    r180(){
-        this.update(new Point(-1.0 * this.x,-1.0*this.y));
-    }
-    
-    r270(){
-        this.update(new Point(this.y,-1.0*this.x));
-    }
 }
 
 class D3Object {
     constructor(label) {
         this.label = label;
-        this.absolute = new Point(0, 0);
-        this.relative = new Point(0, 0);
         this.dimension = new Dimension(0, 0);
-        this.contentDimension = new Dimension(0, 0);
     }
     
-    anchor(point) {
-        //console.log(this.dimension);
-        let newPoint = this.dimension.toPoint();
-        newPoint.scale(-0.5);
-        newPoint.translate(point, translate.ADD);
-        return newPoint;
-    }
-
     setDimension(dimension) {
         this.dimension = dimension;
     }
@@ -180,15 +44,22 @@ class D3Object {
 class Site extends D3Object {
     constructor (siteData, agent) {
         super(siteData.site_name);
+        let site = this;
         this.links = siteData.site_links.map(function(link)
             { 
                 return new SiteLink(link[0],link[1]); 
             });
         this.agent = agent;
-        this.states = siteData.site_states;
+        this.states = siteData.site_states.map(function(state) {
+                return new State(state, site);
+            });
         this.currentState = null;
+        this.startAngle = 0;
+        this.endAngle = 0;
+        this.clicked = 0;
+        this.hover = 0;
     }
-    
+
     setId(id) {
         this.id = id;
     }
@@ -203,21 +74,114 @@ class Site extends D3Object {
     getAgent() {
         return this.agent;
     }
+
+    setAngles(startAngle, endAngle) {
+        this.startAngle = startAngle;
+        this.endAngle = endAngle;
+    }
+
+    getStates() {
+        return this.states;
+    }
+
+    generateSelfLoopPath(innerRadius) {
+         let pathObj = [];
+            let pathPointStart = {};
+            pathPointStart.x = this.cartX(innerRadius);
+            pathPointStart.y = this.cartY(innerRadius);
+
+            let pathPointSide1 = {};
+
+            pathPointSide1.x = 7 * innerRadius/8 * Math.cos(this.startAngle + 3 * Math.PI/2);
+            pathPointSide1.y = 7 * innerRadius/8 * Math.sin(this.startAngle + 3 * Math.PI/2);
+
+            let pathPointMid = {};
+            pathPointMid.x = this.cartX(3 * innerRadius / 4);
+            pathPointMid.y = this.cartY(3 * innerRadius / 4);
+            
+            let pathPointSide2 = {};
+
+            pathPointSide2.x = 7 * innerRadius/8 * Math.cos(this.endAngle + 3 * Math.PI/2);
+            pathPointSide2.y = 7 * innerRadius/8 * Math.sin(this.endAngle + 3 * Math.PI/2);
+
+            let pathPointEnd = {};
+            pathPointEnd.x = this.cartX(innerRadius);
+            pathPointEnd.y = this.cartY(innerRadius);
+            pathObj.push(pathPointStart);
+            pathObj.push(pathPointSide1);
+            pathObj.push(pathPointMid);
+            pathObj.push(pathPointSide2);
+            pathObj.push(pathPointEnd);
+            return pathObj;
+    }
+    generateTreeObj() {
+        let treeObj = {};
+        treeObj.name = this.label;
+        let childArray = [];
+        if(this.states !== undefined) {
+            for (let state in this.states) {
+                let childObj = {};
+                childObj.name = this.states[state].name;
+                childObj.children = [];
+                childArray.push(childObj);
+            }
+        }
+        treeObj.children = childArray;
+        return treeObj;
+    }
+
+    getAngle() {
+        return (this.startAngle + this.endAngle)/2 +3 * Math.PI/2;
+    }
+
+    cartX (r) {
+        //console.log(this.startAngle);
+        return r * Math.cos(((this.startAngle + this.endAngle)/2 + 3 * Math.PI/2));
+
+    }
+    cartY (r) {
+        return r * Math.sin(((this.startAngle + this.endAngle)/2 + 3 * Math.PI/2));
+    }
 }
 
 class Node extends D3Object {
     constructor (nodeData) {
         super(nodeData.site_node_name);
         let node = this;
+        this.clicked = 0; // for detect cycle
+        this.side = 0; // for detect cycle
         this.sites = nodeData.site_node_sites.map(function(siteData, i) {
             let site = new Site(siteData, node);
             site.setId(i); 
             return site;
         });
+        
     }
     
     setId(id) {
         this.id = id;
+    }
+
+    generateIdMap() {
+        this.idHashMap = {};
+        /* generate id hashmap */
+        let node = this;
+        this.sites.forEach(function(site) {
+                //console.log(node.idHashMap);
+                node.idHashMap[site.id] = site;           
+        });
+    }
+
+    sortSites() {
+        this.generateIdMap();
+        this.sites.sort(function(a,b) {
+            if (a.label > b.label)
+                return 1;
+            else if (a.label < b.label)
+                return -1;
+            else 
+                return 0;
+        });
     }
 
     listSites() {
@@ -225,18 +189,20 @@ class Node extends D3Object {
     }
 
     getSite(siteId) {
-        return this.listSites()[siteId];
+        if (this.idHashMap !== undefined)
+            {return this.idHashMap[siteId];}
+        return this.sites[siteId];
+        
     }
 
-    preferredSize() {
-        let d = this.listSites()
-                    .reduce(function(acc,site)
-                    {
-                        return acc.add(site.getDimension());
-                    },
-                    this.contentDimension.scale(1.0));
-        return this.contentDimension.scale(2.0).max(d);
-    }   
+}
+
+class State {
+    constructor(name, site) {
+        this.name = name;
+        this.site = site;
+    }
+
 }
 
 class SiteLink {
@@ -248,12 +214,7 @@ class SiteLink {
     equals(otherLink) {
         return otherLink.nodeId == this.nodeId && otherLink.siteId == this.siteId;
     }
-}
 
-class SiteEdge {
-    constructor(targetNode, target) {
-
-    }
 }
 
 class DataStorage {
@@ -272,6 +233,8 @@ class DataStorage {
     }
 
     getNode(id) {
+        if (this.idHashMap !== undefined)
+            {return this.idHashMap[id];}
         return this.data[id];
     }
 
@@ -283,15 +246,105 @@ class DataStorage {
         return this.getNode(node).getSite(s);
     }
 
-    // layout of sites
-    siteDistance(site, point) {
-        let distances = site.listLinks().map(function(link) {
-            let nodeLocation = this.getNode(link.nodeId).absolute;
-            return nodeLocation.distance(point);
+    generateIdMap() {
+        this.idHashMap = {};
+        /* generate id hashmap */
+        let nodes = this;
+        this.data.forEach(function(node) {
+                nodes.idHashMap[node.id] = node;           
         });
-        let result = distances.reduce(function(a,b){ 
-            return a + b; }, 0);
-        return result;
+    }
+
+    sortNodes() {
+        this.generateIdMap();
+        this.data.sort(function(a,b) {
+            if (a.label > b.label)
+                return 1;
+            else if (a.label < b.label)
+                return -1;
+            else 
+                return 0;
+        });
+    }
+    
+    constructHierarchy() {
+        let siteList = [];
+        let data = this.data;
+       // console.log(data);
+        for (let key in data) { 
+            let sites = data[key].listSites();
+            for (let key in sites) {
+                siteList.push(sites[key]);
+            }
+        }
+
+        let hierarchyBase = [];
+        for (let sites in siteList)  {
+            //console.log(siteList[sites]);
+            let entry = {};
+            entry.name = 'root.' + siteList[sites].getAgent().label + '.' + siteList[sites].label;
+            entry.parentId = siteList[sites].getAgent().id;
+            entry.id = siteList[sites].id;
+            let links = siteList[sites].listLinks();
+            let linkArray = [];
+
+            for (let link in links) {               
+                //console.log(data);
+                let site = this.getSite(links[link].nodeId, links[link].siteId);
+                linkArray.push('root.' + site.getAgent().label + '.' + site.label);
+            }
+
+            entry.links = linkArray;
+            hierarchyBase.push(entry);
+        }
+
+        /* taken from Michael Bostock's hierarchy edge bundling example at https://bl.ocks.org/mbostock/7607999  */
+        let map = {};
+
+        function find(name, data) {
+            let node = map[name], i;
+            if (!node) {
+            node = map[name] = data || {name: name, children: []};
+            if (name.length) {
+                node.parent = find(name.substring(0, i = name.lastIndexOf(".")));
+                node.parent.children.push(node);
+                node.key = name.substring(i + 1);
+            }
+            }
+            return node;
+        }
+
+        hierarchyBase.forEach(function(d) {
+            find(d.name, d);
+        });
+
+        return d3.hierarchy(map[""]);
+    }
+
+    sortSites() {
+        this.listNodes().map(function(node) {node.sortSites();});
+    }
+
+    packageLinks(nodes) {
+     
+        let map = {},
+            links = [];
+
+        // Compute a map from name to node.
+        nodes.forEach(function(d) {
+            //console.log(d);
+            map[d.data.name] = d;
+        });
+
+        // For each import, construct a link from the source to target node.
+        nodes.forEach(function(d) {
+            if (d.data.links) d.data.links.forEach(function(i) {
+            links.push(map[d.data.name].path(map[i]));
+            });
+        });
+
+        //console.log(links);
+        return links;
     }
 }
 

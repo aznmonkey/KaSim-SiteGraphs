@@ -1,0 +1,412 @@
+[
+    {
+        "site_node_name": "DNA",
+        "site_node_sites": [
+            {
+                "site_name": "e5",
+                "site_links": [],
+                "site_states": [
+                    "lig",
+                    "dRP",
+                    "P",
+                    "OH",
+                    "NA"
+                ]
+            },
+            {
+                "site_name": "e3",
+                "site_links": [],
+                "site_states": [
+                    "lig",
+                    "dRP",
+                    "P",
+                    "OH",
+                    "PUA",
+                    "NA"
+                ]
+            },
+            {
+                "site_name": "base",
+                "site_links": [],
+                "site_states": [
+                    "A",
+                    "T",
+                    "G",
+                    "C",
+                    "U",
+                    "AP"
+                ]
+            },
+            {
+                "site_name": "nucleotide",
+                "site_links": [],
+                "site_states": [
+                    "present",
+                    "absent"
+                ]
+            },
+            {
+                "site_name": "damaged",
+                "site_links": [],
+                "site_states": [
+                    "no",
+                    "yes"
+                ]
+            },
+            {
+                "site_name": "base_mod",
+                "site_links": [],
+                "site_states": [
+                    "none",
+                    "5mB",
+                    "8oxoB",
+                    "56DHB",
+                    "hmB",
+                    "5hB",
+                    "FapyB",
+                    "Bh",
+                    "3meB",
+                    "7meB",
+                    "eB"
+                ]
+            },
+            {
+                "site_name": "dg",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "ape",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pol",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "dnm",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "lig",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pnk",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "par",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "DNMT3",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "dg",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "UDG",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "cat",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "TDG",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "cat",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "dnmt",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "rar",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "cbp",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "OGG",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "cat",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "NEIL",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "cat",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "APE1",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "dg",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pol",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "POLb",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "lig",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "XRCC1",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "ape",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pol",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "lig",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pnk",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "par",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "PARP1",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "parp",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "lig",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "ape",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "par",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "PARc",
+        "site_node_sites": [
+            {
+                "site_name": "parp",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pargchain",
+                "site_links": [],
+                "site_states": [
+                    "0",
+                    "1",
+                    "2"
+                ]
+            }
+        ]
+    },
+    {
+        "site_node_name": "LIG3",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "variant",
+                "site_links": [],
+                "site_states": [
+                    "a",
+                    "b"
+                ]
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "par",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "LIG1",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pol",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "pcn",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    },
+    {
+        "site_node_name": "PNKP",
+        "site_node_sites": [
+            {
+                "site_name": "dbd",
+                "site_links": [],
+                "site_states": []
+            },
+            {
+                "site_name": "xrc",
+                "site_links": [],
+                "site_states": []
+            }
+        ]
+    }
+]
