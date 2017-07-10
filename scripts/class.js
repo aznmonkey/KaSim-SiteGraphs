@@ -1,5 +1,19 @@
 /*jshint esversion: 6*/
 
+var opacity = {
+    node_normal: 1,
+    node_hidden: 0.25,
+    line_highlight: 0.9, 
+    line_normal: 0.4,
+    line_side: 0.15,
+    line_hidden: 0.1
+};
+
+var snapshot = {
+    NO: 0,
+    YES: 1
+};
+
 /* Contains classes required for the SiteGraph visualization */
 
 class Dimension {
@@ -217,6 +231,60 @@ class SiteLink {
 
 }
 
+/* stores multiple datastorage objects for the mixture/snapshot data */
+class DataWareHouse {
+    constructor(data) {
+        this.snapshot_file = data.snapshot_file;
+        this.event = data.snapshot_event;
+        this.time = data.snapshot_time;
+        this.tokens = data.snapshot_tokens;
+        this.snapshot = [];
+        for (let map in data.snapshot_agents) {
+            let sitegraph = {};
+            sitegraph.id = parseInt(map);
+            sitegraph.count = data.snapshot_agents[map][0];
+            sitegraph.mapData = new DataStorage(data.snapshot_agents[map][1], true);
+            this.snapshot.push(sitegraph);
+        }
+        
+        //console.log(this.snapshot);
+    }
+
+    getSpeciesTree(id) {
+        let species = this.snapshot[id];
+        let tree = {};
+        tree.name = "mixture"+id;
+        let obj = {};
+        tree.children = [];
+        for (let i in species.mapData.data) {
+            obj[species.mapData.data[i].label] = (obj[species.mapData.data[i].label] || 0) + 1;
+        }
+
+        for (let item in obj) {
+            let tempObj = {};
+            tempObj.name = item;
+            tempObj.size = obj[item];
+            tree.children.push(tempObj);
+        }
+        return tree;
+    }
+
+    generateTreeData() {
+        this.treeData = {};
+        this.treeData.name = "root";
+        this.treeData.children = [];
+        for (let child in this.snapshot) {
+            let children = {};
+            children.name = "mixture" + this.snapshot[child].id;
+            children.data = this.snapshot[child].mapData;
+            children.size = this.snapshot[child].count;
+            this.treeData.children.push(children);
+        }
+    }
+
+}
+
+/* used to store sitegraph/contactmap information */
 class DataStorage {
     constructor(data, isSnapshot) {
         if(!data) {return null;} /* check that there is data*/

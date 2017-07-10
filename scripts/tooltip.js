@@ -1,3 +1,4 @@
+
 /*jshint esversion: 6*/
 
 class UIManager {
@@ -9,7 +10,7 @@ class UIManager {
 
         this.tip = renderer.root.append("div")	
             .attr("class", "tooltip")	
-            .style("font-size", "2em")			
+            .style("font-size", "1.5em")			
             .style("opacity", 0)
             .style("padding", "0.5em");
 
@@ -35,7 +36,6 @@ class UIManager {
 
         this.stateToggle = toolbox.append("div")
             .attr("class", "stateButtonDiv")
-            .style("padding", "0.5em")
         .append("input")
             .attr("class", "stateButton")
             .attr("type", "button")
@@ -48,6 +48,7 @@ class UIManager {
                 renderer.cycleDetect = true;
                 renderer.rerender();
                 renderer.root.select("#toggleLines").attr("disabled", null);
+                console.log("cycled");
             }
             else 
             {

@@ -1,0 +1,61 @@
+## DNA basic building block
+%agent:  DNA(e5~lig~dRP~P~OH~NA,\
+	     e3~lig~dRP~P~OH~PUA~NA,\
+	     base~A~T~G~C~U~AP,\
+	     nucleotide~present~absent,\
+	     damaged~no~yes, \
+	     base_mod~none~5mB~8oxoB~56DHB~hmB~5hB~FapyB~Bh~3meB~7meB~eB,\
+	     dg, \
+	     ape,\
+	     pol,\
+	     xrc,\
+	     dnm,\
+	     lig,\
+	     pnk,\
+	     par \
+	     )
+
+## Methylation enzyme
+#dbd:DNA interactions; dg:DNA glycosylase interactions; 
+%agent: DNMT3(dbd,dg)
+
+## DNA glycosylases
+%agent: UDG(dbd,cat) ## substrate Lig.damaged.Lig --(glycosylase)--> Lig.ap.Lig
+%agent: TDG(dbd,cat,dnmt,rar,cbp) ## substrate Lig.damaged.Lig --(glycosylase)--> Lig.ap.Lig
+%agent: OGG(dbd,cat) ## substrate Lig.damaged.Lig --(glycosylase)--> P.ap.P
+%agent: NEIL(dbd,cat) ## substrate Lig.damaged.Lig --(glycosylase)--> PUA.ap.P
+
+## Base excision repair
+#dbd: DNA binding; dg: DG binding; pol: POLB binding; xrc: XRCC1 binding
+%agent: APE1(dbd,dg,pol,xrc) ## substrate Lig.ap.Lig --(AP endonuclease)--> OH.ap.dRP
+
+#dbd: DNA binding; ape:APE1 binding; xrc: XRCC1 binding 
+%agent: POLb(dbd,xrc,lig) ## substrate OH.ap.dRP --(dRPlyase)--> OH.ap.P --(polymerase)--> OH.n.P 
+
+#dbd: DNA binding; ape: APE1 binding; pol: POLB binding; lig:LIG3 binding
+%agent: XRCC1(dbd,ape,pol,lig,xrc,pnk,par)
+
+#dbd : DNA binding; parp : PARP1 binding; lig:LIG3 binding; ape: APE1 binding; xrc : XRCC1 binding; par : PARc binding;
+%agent: PARP1(dbd,parp,lig,ape,xrc,par)		#NEW#
+
+#parp : PARP1 binding; xrc: XRCC1 binding; chain : Lenght of PAR chain (0-> 0; 1-> n<7; 2-> n>7);
+%agent: PARc(parp,xrc,pargchain~0~1~2)			#NEW#
+
+
+
+#dbd: DNA binding; xrc:XRCC1 binding
+%agent: LIG3(dbd,variant~a~b,xrc,par) #xrc only available if variant~a
+
+#DNA ligase 1
+%agent: LIG1(dbd,pol,pcn) ## substrate OH.n.P --(Ligase)--> Lig.n.Lig
+
+#dbd: DNA binding
+%agent: PNKP(dbd, xrc)
+
+
+##Tokens
+%token: NAD #NEW#
+%token: AMP
+%token: LIG3_act 
+%token: LIG1_act 
+%token: APE1_act 
