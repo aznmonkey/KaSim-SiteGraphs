@@ -6,7 +6,7 @@ class Parser {
   }
 
   /* load a json from a path */
-  readJson(path, contactMap) {
+  readJson(path, isSnapShot) {
     var parser = this;
     let json = path || './data/simple.json';
     return new Promise(function(resolve, reject) {
@@ -17,8 +17,8 @@ class Parser {
         // Resolve the promise with the response text
           //console.log(httpRequest.responseText);
           let data = JSON.parse(httpRequest.responseText);
-          //console.log(data);
-          resolve(parser.populateData(data));
+          console.log(data);
+          resolve(parser.populateData(data, isSnapShot));
 
         }
         else {
@@ -36,10 +36,15 @@ class Parser {
     });
   }
 
-  populateData(data) {
-    let dataStorage = new DataStorage(data, 0);
+  populateData(rawData, isSnapShot) {
+    let data;
+    if (!isSnapShot) 
+      data = new DataStorage(rawData, isSnapShot);
+    else {
+      data = new DataWareHouse(rawData);
+    }
     //console.log(dataStorage);
-    return dataStorage;
+    return data;
   }
 
   removeData() {

@@ -1,3 +1,3 @@
 var contactMap = new ContactMap('map1', snapshot.NO);
-contactMap.setData('data/WNT.json');
+contactMap.setData('data/complex.json');
 

@@ -22,9 +22,11 @@
 <!-- load scripts -->
 <script src="scripts/class.js"></script>
 <script src="scripts/parser.js"></script>
-<script src="scripts/render.js"></script>
-<script src="scripts/main.js"></script>
+<script src="scripts-snapshot/render.js"></script>
 <script src="scripts/utils.js"></script>
-<script src="scripts/tooltip.js"></script>
+<script> 
+    var snapshot = new Snapshot('map1');
+    snapshot.setData('data/mixture1.json');
+</script>
 </html>
 
