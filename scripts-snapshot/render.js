@@ -27,9 +27,9 @@ class Snapshot {
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
             let w = window.innerWidth - margin.left - margin.right;
-            let h = window.innerHeight - margin.top - margin.bottom;
+            let h = window.innerHeight - margin.top - margin.bottom - 25.5;
             if (response) {
-                let layout = new Layout(snapshot, new Dimension(w, h), margin);
+                let layout = new Layout(snapshot, new Dimension(w * 4/5, h), margin);
                 let renderer = new Render(snapshot.id, layout);
                 snapshot.clearData();
                 renderer.render();
@@ -52,7 +52,7 @@ class Snapshot {
 
 class Render {
     constructor(id, layout) {
-        this.root = d3.select('body');
+        this.root = d3.select('#drawing');
         let width = layout.dimension.width;
         let height = layout.dimension.height;
         this.layout = layout;
@@ -63,22 +63,38 @@ class Render {
         let svgHeight = height +
                             this.layout.margin.top +
                             this.layout.margin.bottom;
-        let container = this.root
+        let container = this.container = this.root
             .append("div")
             .classed("render-container", true)
             .append("svg")
             .attr("class", "svg-group")
             .attr("id", "map-container")
             .attr("preserveAspectRatio", "xMinYMin meet")
-            .attr("viewBox", "0 0 " + svgWidth + " " + svgHeight );
-        this.svg = container.append('g');
+            .attr("viewBox", "0 0 " + svgWidth  + " " + svgHeight )
+            
+        let svg = this.svg = container.append('g');
         let data = this.layout.snapshot.data;
         data.generateTreeData();
         //console.log(treeData);
-        container.call(d3.zoom().on('zoom', () => this.svg.attr('transform', d3.event.transform)));
-        container.call(d3.drag().on('drag', () => this.svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
-        
-        
+        function zoomed() {
+            svg.attr('transform', d => d3.event.transform );
+        };
+
+        let zoom = d3.zoom().scaleExtent([0.5, 10]).on('zoom', zoomed);
+        container.call(zoom);
+        container.call(d3.drag().on('drag', () => svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
+        /* add behavior for reset zoom button */
+
+        d3.select("#resetButton").on("click", reset);
+
+        function reset() {
+            container.transition().duration(750)
+            .call(zoom.transform, d3.zoomIdentity);
+        }
+
+        this.coloring = {};
+        this.marking = {};
+        this.tooltip = new SnapUIManager(this);
     }
 
     render() {
@@ -87,115 +103,140 @@ class Render {
     }
 
     renderTreeMap() {
+        let renderer = this;
         let data = this.layout.snapshot.data;
         let width = this.layout.dimension.width;
         let height = this.layout.dimension.height;
-        let treemap = d3.treemap()
+        let layout = this.layout;
+        let svg = this.svg;
+        let treemap = this.treemap = d3.treemap()
             .tile(d3.treemapResquarify)
             .size([width, height])
             .round(true)
-            .paddingInner(0);
+            .paddingInner(4);
+        let root = this.root = d3.hierarchy(data.treeData)
+                .eachBefore(d => { d.data.id = (d.parent ? d.parent.data.id + "." : "") + d.data.name; })
+                .sum( d => d.count * d.size )
+                .sort((a, b) => { return b.height - a.height || b.value - a.value; });
 
-        let root = d3.hierarchy(data.treeData)
-            .eachBefore(d => { d.data.id = (d.parent ? d.parent.data.id + "." : "") + d.data.name; })
-            .sum(d => d.size)
-            .sort((a, b) => { return b.height - a.height || b.value - a.value; });
-        
-        
         treemap(root);
-        console.log(root);
 
-        let cell = this.svg.selectAll(".treeSpecies")
+        let cell = this.cell = this.svg.selectAll(".treeSpecies")
             .data(root.leaves())
             .enter().append("g")
                 .attr("class", "treeSpecies")
                 .attr("id", d => d.data.id)
-                .attr("transform", d => { return "translate(" + d.x0 + "," + d.y0 + ")"; });
+                .attr("transform", d => { let x = d.x0 + (layout.margin.left + layout.margin.right)/2;
+                                            let y = d.y0 + (layout.margin.top + layout.margin.bottom)/2;
+                                            return "translate(" + x + "," + y + ")"; });
 
 
         cell.append("rect")
                 .attr("width", d => { return d.x1 - d.x0; })
                 .attr("height", d => { return d.y1 - d.y0; })
-                .attr("fill", d => { return "white"; });
-        /*
-        cell.append("clipPath")
-            .attr("id", d => { return "clip-" + d.data.id; })
-            .append("use")
-            .attr("xlink:href", d => { return "#" + d.data.id; });
+                .attr("fill", d => { return "grey"; })
+                .on("mouseover", mouseoverSpecies)
+                .on("mouseout", mouseoutSpecies)
+                .on("click", markSpecies);
+            
+        cell.exit().remove();
 
-        cell.append("text")
-            .attr("clip-path", d => { return "url(#clip-" + d.data.id + ")"; })
-            .selectAll("tspan")
-            .data(d => { return d.data.name.split(/(?=[A-Z][^A-Z])/g); })
-            .enter().append("tspan")
-            .attr("x", 4)
-            .attr("y", function(d, i) { return 13 + i * 10; })
-            .text(d => { return d; });
-        */
+        function mouseoverSpecies(d) {
+            let species = d;
+            svg.selectAll(".treeRects").filter(d => d.parent.data.name === species.data.name).attr("fill", d => renderer.coloring[d.data.name].darker());
+            renderer.tooltip.showSpecies(d);
+        }
+
+        function mouseoutSpecies(d) {
+            let species = d;
+            svg.selectAll(".treeRects").filter(d => d.parent.data.name === species.data.name && renderer.marking[d.parent.data.name] !== 1 ).attr("fill", d => renderer.coloring[d.data.name]);           
+        }
+
+        function markSpecies(d) {
+            let species = d;
+            if (renderer.marking[d.data.name] === undefined) {
+                renderer.marking[d.data.name] = 1;
+            }
+            else if (renderer.marking[d.data.name] === 1) {
+                renderer.marking[d.data.name] = 0;
+            }
+            else {
+                renderer.marking[d.data.name] = 1;
+            }
+            svg.selectAll(".treeRects").filter(d => d.parent.data.name === species.data.name)
+                .attr("fill", d => { 
+                    if (renderer.marking[d.parent.data.name] === 1 ) {
+                        return renderer.coloring[d.data.name].darker();
+                    }
+                    return renderer.coloring[d.data.name]; 
+                });  
+            //console.log(renderer.marking);
+        }
     }
 
     renderNodes() {
+        let renderer = this;
         let c20 = d3.scaleOrdinal(d3.schemeCategory20);
         let data = this.layout.snapshot.data;
         for (let mixture in data.snapshot) {
             let id = data.snapshot[mixture].id;
-            console.log(id);
             let cell = this.svg.select("#root\\.mixture" + id);
             //console.log(cell.data());
 
             let width = cell.data()[0].x1 - cell.data()[0].x0;
             let height = cell.data()[0].y1 - cell.data()[0].y0;
             
-            console.log(cell.data()[0], width, height);
+            // console.log(cell.data()[0], width, height);
 
-            let treemap = d3.treemap()
+            let treemap = this.nodeTreemap = d3.treemap()
                 .tile(d3.treemapResquarify)
-                .size([width - 10, height - 10])
+                .size([width - 4, height - 4])
                 .round(true)
-                .paddingInner(1);
+                .paddingInner(0);
                 
             let tree = data.getSpeciesTree(id);
 
             //console.log(tree);
-            let root = d3.hierarchy(tree)
+            let root = this.nodeRoot = d3.hierarchy(tree)
             .eachBefore(d => { d.data.id = (d.parent ? d.parent.data.id + "." : "") + d.data.name; })
             .sum(d => d.size)
             .sort(function(a, b) { return b.height - a.height || b.value - a.value; });
-        
-            //console.log(root);
+            
+            //console.log(renderer.coloring);
             treemap(root);
-
-            let node = cell.selectAll(".treeNodes")
+            
+            let node = this.node = cell.selectAll(".treeNodes")
                 .data(root.leaves())
                 .enter().append("g")
                     .attr("class", "treeNodes")
                     .attr("id", d => d.data.id)
-                    .attr("transform", d => { let x = d.x0 + 5;
-                                                     let y = d.y0 + 5;
+                    .attr("transform", d => { let x = d.x0 + 2;
+                                                     let y = d.y0 + 2;
                                                      return "translate(" + x + "," + y + ")"; });
 
 
             node.append("rect")
+                    .attr("class", "treeRects")
                     .attr("id", d => d.data.id )
                     .attr("width", d => d.x1 - d.x0 )
                     .attr("height", d => d.y1 - d.y0 )
-                    .attr("fill", (d, i) => { return d3.rgb(c20(i)); });
+                    .attr("fill", (d, i) => { 
+                        if (renderer.coloring[d.data.name] === undefined) {
+                            renderer.coloring[d.data.name] = d3.rgb(c20(Object.keys(renderer.coloring).length));
+                        } 
+                        if (renderer.marking[d.parent.data.name] === 1)
+                            return renderer.coloring[d.data.name].darker();
+                        return renderer.coloring[d.data.name]; })
+                    .style('pointer-events', 'none');
 
-            node.append("clipPath")
-                .attr("id", d => "clip-" + d.data.id )
-                .append("use")
-                .attr("xlink:href", d => "#" + d.data.id );
-
-            node.append("text")
-                .attr("clip-path", d => { return "url(#clip-" + d.data.id + ")"; })
-                .selectAll("tspan")
-                .data(d => { return d.data.name.split(/(?=[A-Z][^A-Z])/g); })
-                .enter().append("tspan")
-                .attr("x", 4)
-                .attr("y", function(d, i) { return 13 + i * 10; })
-                .text(d => { console.log(d); return d; });
-            
+            node.exit().remove();
         }
+
+      
+ 
+    }
+    removeNodes() {
+        d3.selectAll(".treeNodes").remove();
     }
 
 }

@@ -42,6 +42,7 @@ class UIManager {
             .attr("value", "Show All States")
             .on("click", showStates);
 
+
         function toggleCycleDetection() {
             //console.log("checked");
             if (d3.select("#cycleCheckbox").property("checked")) {

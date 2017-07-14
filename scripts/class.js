@@ -250,6 +250,7 @@ class DataWareHouse {
         //console.log(this.snapshot);
     }
 
+    /* generates tree for for each individual species in the snapshot */
     getSpeciesTree(id) {
         let species = this.snapshot[id];
         let tree = {};
@@ -269,7 +270,8 @@ class DataWareHouse {
         return tree;
     }
 
-    generateTreeData() {
+    /* generates tree for snapshot visualization based on the count or number of agent within the species */
+    generateTreeData(count) {
         this.treeData = {};
         this.treeData.name = "root";
         this.treeData.children = [];
@@ -277,7 +279,11 @@ class DataWareHouse {
             let children = {};
             children.name = "mixture" + this.snapshot[child].id;
             children.data = this.snapshot[child].mapData;
-            children.size = this.snapshot[child].count;
+            //console.log(this.snapshot[child]);
+            
+            children.count = this.snapshot[child].count;
+            children.size = this.snapshot[child].mapData.data.length;
+            
             this.treeData.children.push(children);
         }
     }

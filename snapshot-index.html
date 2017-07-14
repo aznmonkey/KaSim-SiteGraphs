@@ -6,10 +6,21 @@
 </head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/snapshot.css">
   <link rel="stylesheet" href="css/sitegraph.css">
 <body>
 
 <div id="header">
+
+<form>
+  <label><input type="radio" name="mode" value="sumByMass" checked> Mass</label>
+  <label><input type="radio" name="mode" value="sumByCount" > Count</label>
+  <label><input type="radio" name="mode" value="sumBySize"> Size</label>
+  <button id="resetButton" type="button"> Reset </button>
+</form>
+
+
+
 </div>
 
 <div id="drawing">
@@ -23,10 +34,11 @@
 <script src="scripts/class.js"></script>
 <script src="scripts/parser.js"></script>
 <script src="scripts-snapshot/render.js"></script>
+<script src="scripts-snapshot/tooltip.js"></script>
 <script src="scripts/utils.js"></script>
 <script> 
     var snapshot = new Snapshot('map1');
-    snapshot.setData('data/mixture1.json');
+    snapshot.setData('data/after_Wnt.json');
 </script>
 </html>
 
