@@ -16,3 +16,10 @@ form {
     border-radius: 8px;			
     pointer-events: none;	
 }
+
+#controller {
+    margin-top: 5px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+

@@ -16,9 +16,8 @@ class SnapUIManager {
             d3.select("input[value=\"sumByMass\"]")
                 .property("checked", true)
                 .dispatch("change");
-        }, 2000);
+        }, 0);
         
-        this.renderLegend();
         
         d3.selectAll("input")
             .data([sumByMass, sumByCount, sumBySize], function(d) { return d ? d.name : this.value; })
@@ -30,7 +29,7 @@ class SnapUIManager {
             let height = renderer.layout.dimension.height;
             let treemap = d3.treemap()
                 .tile(d3.treemapResquarify)
-                .size([width, height])
+                .size([width, height - 20])
                 .round(true)
                 .paddingInner(4);
 
@@ -55,7 +54,7 @@ class SnapUIManager {
             .transition()
                 .duration(750)
                 .attr("transform", d => { let x = d.x0 + (renderer.layout.margin.left + renderer.layout.margin.right)/2;
-                                            let y = d.y0 + (renderer.layout.margin.top + renderer.layout.margin.bottom)/2;
+                                            let y = d.y0 + (renderer.layout.margin.top + renderer.layout.margin.bottom)/2 + 20;
                                             return "translate(" + x + "," + y + ")"; })
                 
                 .select("rect")
@@ -81,51 +80,77 @@ class SnapUIManager {
     }
     
     renderLegend() {
-        //console.log("hi");
-        let legendRectSize = 5;
-        let legendSpacing = 4;
+        console.log("hi");
+        let legendRectSize = 25;
+        let legendSpacing = 10;
+        let padding = 10;
         let renderer = this.renderer;
-        let svg = renderer.svg;
-        let legend = svg.selectAll('.legend')                      
-          .data(renderer.coloring)                                                                              
-          .append('g')                                             
-          .attr('class', 'legend')                                 
-          .attr('transform', function(d, i) { 
-            //console.log(d);                     
-            let height = legendRectSize + legendSpacing;           
-            let offset =  height * rednerer.coloring.length / 2;      
-            let horz = -2 * legendRectSize;                        
-            let vert = i * height - offset;                        
+        let dataArray = Object.keys(renderer.coloring).map( (d) => {
+            let tempObj = {};
+            tempObj[d] = renderer.coloring[d];
+            return tempObj;
+        } );
+        
+
+        let legendSVG = d3.select("#drawing")
+            .append("svg")
+            .attr("class", "legend-container")   
+            .attr("height", (legendRectSize + legendSpacing) * dataArray.length + 2 * padding )
+            .attr("width", "20vw" )
+            .attr("preserveAspectRatio", "xMinYMin meet");        	
+
+        let legend = legendSVG.selectAll(".legend-elements")           
+        .data(dataArray)      
+          .enter()                                                                        
+          .append('g');    
+        legend.merge(legend)   
+          .attr("class", "legend-elements")                   
+          .attr('transform', function(d, i) {                     
+            let height = legendRectSize + legendSpacing;            
+            let horz = legendRectSize;                        
+            let vert = i * height + padding;                        
             return 'translate(' + horz + ',' + vert + ')';         
-          });                                                      
+          });                 
 
         legend.append('rect')                                      
           .attr('width', legendRectSize)                           
           .attr('height', legendRectSize)                          
-          .style('fill', d => console.log(d));                                    
-          //.style('stroke', color);                                 
+          .style('fill', d => d[Object.keys(d)[0]] )                                  
+          .style('stroke', d => d[[Object.keys(d)[0]]] );                                 
 
         legend.append('text')                                      
           .attr('x', legendRectSize + legendSpacing)               
           .attr('y', legendRectSize - legendSpacing)               
-          .text(function(d) { return d; });                        
+          .text( d => Object.keys(d)[0] );                        
     }
 
     showSpecies(d) { 
-      
         let renderer = this.renderer;
         this.tip
             .style("text-opacity", 1)
             .style("background", d => {
                 let color = d3.rgb("white");
-                color.opacity = 0.4;
+                color.opacity = 0.8;
                 return color;
-            })
+            });
 
         let speciesTip = this.tip
             .text("count: " + d.data.count)
             .style('color', "black");
     }     
+
+    hideSpecies(d) {
+        let renderer = this.renderer;
+        this.tip
+            .style("text-opacity", 0)
+            .style("background", d => {
+                let color = d3.rgb("white");
+                color.opacity = 0;
+                return color;
+            });
+        this.tip
+            .text("");
+    }
     
 
 }

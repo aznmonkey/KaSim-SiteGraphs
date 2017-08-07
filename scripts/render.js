@@ -986,7 +986,7 @@ class Render {
             let textLength = siteText.node().getComputedTextLength() + paddingSite + this.radius/120;
             let lineLength;
             if (!hide) {
-                adjustStateLines(true)
+                adjustStateLines(true);
                 stateLine.attr("opacity", 1);
             }
             else {

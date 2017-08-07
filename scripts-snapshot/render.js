@@ -27,7 +27,7 @@ class Snapshot {
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
             let w = window.innerWidth - margin.left - margin.right;
-            let h = window.innerHeight - margin.top - margin.bottom - 25.5;
+            let h = window.innerHeight - margin.top - margin.bottom - 25.5 - 20 - 5;
             if (response) {
                 let layout = new Layout(snapshot, new Dimension(w * 4/5, h), margin);
                 let renderer = new Render(snapshot.id, layout);
@@ -52,10 +52,13 @@ class Snapshot {
 
 class Render {
     constructor(id, layout) {
+        let renderer = this;
         this.root = d3.select('#drawing');
         let width = layout.dimension.width;
         let height = layout.dimension.height;
         this.layout = layout;
+        this.dblclicked = false;
+        this.zoomId = -1;
 
         let svgWidth = width +
                             this.layout.margin.left +
@@ -63,6 +66,9 @@ class Render {
         let svgHeight = height +
                             this.layout.margin.top +
                             this.layout.margin.bottom;
+        
+        
+
         let container = this.container = this.root
             .append("div")
             .classed("render-container", true)
@@ -70,19 +76,52 @@ class Render {
             .attr("class", "svg-group")
             .attr("id", "map-container")
             .attr("preserveAspectRatio", "xMinYMin meet")
-            .attr("viewBox", "0 0 " + svgWidth  + " " + svgHeight )
+            .attr("viewBox", "0 0 " + svgWidth  + " " + svgHeight );
+
+        /* add control bar on top for zoom */
+        let controller = this.container
+        .append("g")
+            .attr("id", "controller");
+
+        controller.append("rect")
+            .attr("width", width)
+            .attr("height", "20px")
+            .style("fill", "lightgrey")
+            .attr("transform", "translate(10 , 0)")
+            .on("click", zoomout);
+
+    
+        function zoomout () {
+            console.log(renderer.zoomTransform);
+            renderer.rerender();
+            d3.selectAll(".treeSpecies").filter(d => d.data.id === renderer.zoomId)
+                .transition()
+                    .duration(750)         
+                    .attr("transform", renderer.zoomTransform )           
+                .select("rect")
+                    .attr("width", d => { return renderer.zoomWidth; })
+                    .attr("height", d => { return renderer.zoomHeight; })
             
-        let svg = this.svg = container.append('g');
+            renderer.dblclicked = false;
+            //("zoomout");
+        }
+        controller.append("text")
+            .attr("dy", "1em")
+            .attr("dx", "1em")
+            .text("root");
+
+            
+        let svg = this.svg = container.append('g').attr("id", "snapshot");
         let data = this.layout.snapshot.data;
         data.generateTreeData();
         //console.log(treeData);
-        function zoomed() {
-            svg.attr('transform', d => d3.event.transform );
-        };
+        //function zoomed() {
+        //    svg.attr('transform', d => d3.event.transform );
+        //}
 
-        let zoom = d3.zoom().scaleExtent([0.5, 10]).on('zoom', zoomed);
-        container.call(zoom);
-        container.call(d3.drag().on('drag', () => svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
+        //let zoom = d3.zoom().scaleExtent([0.5, 10]).on('zoom', zoomed);
+        //container.call(zoom);
+        //container.call(d3.drag().on('drag', () => svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
         /* add behavior for reset zoom button */
 
         d3.select("#resetButton").on("click", reset);
@@ -91,15 +130,22 @@ class Render {
             container.transition().duration(750)
             .call(zoom.transform, d3.zoomIdentity);
         }
-
+        
         this.coloring = {};
         this.marking = {};
         this.tooltip = new SnapUIManager(this);
+
+    }
+
+    rerender() {
+        d3.selectAll(".treeSpecies").transition().duration(750).style("fill-opacity", 1);
+        this.renderNodes();
     }
 
     render() {
         this.renderTreeMap();
         this.renderNodes();
+        this.tooltip.renderLegend();
     }
 
     renderTreeMap() {
@@ -111,7 +157,7 @@ class Render {
         let svg = this.svg;
         let treemap = this.treemap = d3.treemap()
             .tile(d3.treemapResquarify)
-            .size([width, height])
+            .size([width, height - 20])
             .round(true)
             .paddingInner(4);
         let root = this.root = d3.hierarchy(data.treeData)
@@ -120,27 +166,68 @@ class Render {
                 .sort((a, b) => { return b.height - a.height || b.value - a.value; });
 
         treemap(root);
-
+        console.log(root.leaves())
+        //this.svg.selectAll(".treeSpecies").remove();        
         let cell = this.cell = this.svg.selectAll(".treeSpecies")
             .data(root.leaves())
-            .enter().append("g")
-                .attr("class", "treeSpecies")
-                .attr("id", d => d.data.id)
-                .attr("transform", d => { let x = d.x0 + (layout.margin.left + layout.margin.right)/2;
-                                            let y = d.y0 + (layout.margin.top + layout.margin.bottom)/2;
-                                            return "translate(" + x + "," + y + ")"; });
+            .enter().append("g");
+
+            cell.exit().remove();
+        cell
+            .merge(cell)
+            .attr("class", "treeSpecies")
+            .attr("id", d => d.data.id)
+            .attr("transform", d => { let x = d.x0 + (layout.margin.left + layout.margin.right)/2;
+                                            let y = d.y0 + (layout.margin.top + layout.margin.bottom)/2 + 20;
+                                            return "translate(" + x + "," + y + ")"; })
 
 
         cell.append("rect")
                 .attr("width", d => { return d.x1 - d.x0; })
                 .attr("height", d => { return d.y1 - d.y0; })
                 .attr("fill", d => { return "grey"; })
+
+        cell.merge(cell.select("rect"))
+                .attr("width", d => { return d.x1 - d.x0; })
+                .attr("height", d => { return d.y1 - d.y0; })
                 .on("mouseover", mouseoverSpecies)
                 .on("mouseout", mouseoutSpecies)
-                .on("click", markSpecies);
+                .on("click", markSpecies)
+                .on("dblclick", zoomInSpecies);
             
-        cell.exit().remove();
+        
+       
 
+        function zoomInSpecies (d) 
+        {
+            if (!renderer.dblclicked) {
+                d3.selectAll(".treeNodes").transition().duration(200).remove();
+                d3.selectAll(".treeSpecies").transition().duration(500).style("fill-opacity", 0);
+                let element = d;
+                let zoomDOM = d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id);
+                renderer.zoomHeight = zoomDOM.select("rect").attr("height");
+                renderer.zoomWidth = zoomDOM.select("rect").attr("width");
+                renderer.zoomTransform = zoomDOM.attr("transform");
+
+                console.log(renderer.zoomTransform);
+
+                d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id)
+                .transition()
+                    .attr("transform", d => { let x = (layout.margin.left + layout.margin.right)/2;
+                                            let y = (layout.margin.top + layout.margin.bottom)/2 + 20;
+                                            return "translate(" + x + "," + y + ")"; })
+                    .duration(750)                   
+                    .select("rect")
+                    .attr("width", width )
+                    .attr("height", height )
+                    .style("fill-opacity", 1);
+                    
+                console.log("zoom in");
+                renderer.dblclicked = true;
+                renderer.zoomId = element.data.id;
+           
+            }
+        }
         function mouseoverSpecies(d) {
             let species = d;
             svg.selectAll(".treeRects").filter(d => d.parent.data.name === species.data.name).attr("fill", d => renderer.coloring[d.data.name].darker());
@@ -231,10 +318,13 @@ class Render {
 
             node.exit().remove();
         }
-
-      
- 
     }
+
+    renderForceDirected(data, id) {
+        let forceContainer = d3.select(id).append("g");
+        
+    }
+
     removeNodes() {
         d3.selectAll(".treeNodes").remove();
     }
