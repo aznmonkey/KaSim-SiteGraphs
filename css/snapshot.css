@@ -23,3 +23,7 @@ form {
     margin-right: 10px;
 }
 
+.links line {
+  stroke:white;
+  stroke-opacity: 0.6;
+}

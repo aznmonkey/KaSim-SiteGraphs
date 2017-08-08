@@ -395,8 +395,42 @@ class DataStorage {
         return d3.hierarchy(map[""]);
     }
 
-    sortSites() {
-        this.listNodes().map(function(node) {node.sortSites();});
+    generateForceDirectedNodes() {
+        let nodes = this.data;
+        let nodeList = [];
+        for (let node in nodes) {
+            let nodeObj = {};
+            nodeObj.id = nodes[node].id;
+            nodeObj.sites = nodes[node].sites;
+            nodeObj.label = nodes[node].label;
+            nodeList.push(nodeObj);
+        }
+        console.log(nodeList);
+        return nodeList;
+        
+    }
+
+    generateForceDirectedLinks() {
+        let nodes = this.data;
+        let linkList = [];
+        for (let node in nodes) {
+            let currentNode = nodes[node];
+            for (let site in currentNode.sites) {
+                let currentSite = currentNode.sites[site];
+                for (let link in currentSite.links) {
+                    let currentLink = currentSite.links[link];
+                    let linkObj = {};
+                    linkObj.source = currentNode.id;
+                    linkObj.sourceSite = currentSite.id;
+                    linkObj.target = currentLink.nodeId;
+                    linkObj.targetSite = currentLink.siteId;
+                    linkObj.value = 2;
+                    linkList.push(linkObj);
+                }
+            }
+        }
+        //console.log(linkList);
+        return linkList;
     }
 
     packageLinks(nodes) {
@@ -419,6 +453,10 @@ class DataStorage {
 
         //console.log(links);
         return links;
+    }
+
+    sortSites() {
+        this.listNodes().map(function(node) {node.sortSites();});
     }
 }
 

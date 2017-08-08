@@ -16,7 +16,7 @@ class SnapUIManager {
             d3.select("input[value=\"sumByMass\"]")
                 .property("checked", true)
                 .dispatch("change");
-        }, 0);
+        }, 10);
         
         
         d3.selectAll("input")
@@ -80,7 +80,6 @@ class SnapUIManager {
     }
     
     renderLegend() {
-        console.log("hi");
         let legendRectSize = 25;
         let legendSpacing = 10;
         let padding = 10;
@@ -96,7 +95,7 @@ class SnapUIManager {
             .append("svg")
             .attr("class", "legend-container")   
             .attr("height", (legendRectSize + legendSpacing) * dataArray.length + 2 * padding )
-            .attr("width", "20vw" )
+            .attr("width", "15vw" )
             .attr("preserveAspectRatio", "xMinYMin meet");        	
 
         let legend = legendSVG.selectAll(".legend-elements")           

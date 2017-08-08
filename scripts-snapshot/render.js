@@ -92,7 +92,6 @@ class Render {
 
     
         function zoomout () {
-            console.log(renderer.zoomTransform);
             renderer.rerender();
             d3.selectAll(".treeSpecies").filter(d => d.data.id === renderer.zoomId)
                 .transition()
@@ -103,6 +102,7 @@ class Render {
                     .attr("height", d => { return renderer.zoomHeight; })
             
             renderer.dblclicked = false;
+            d3.select("#force-container").remove();
             //("zoomout");
         }
         controller.append("text")
@@ -139,6 +139,7 @@ class Render {
 
     rerender() {
         d3.selectAll(".treeSpecies").transition().duration(750).style("fill-opacity", 1);
+        d3.select(".legend-container").style("opacity", 1);
         this.renderNodes();
     }
 
@@ -166,8 +167,7 @@ class Render {
                 .sort((a, b) => { return b.height - a.height || b.value - a.value; });
 
         treemap(root);
-        console.log(root.leaves())
-        //this.svg.selectAll(".treeSpecies").remove();        
+     
         let cell = this.cell = this.svg.selectAll(".treeSpecies")
             .data(root.leaves())
             .enter().append("g");
@@ -195,21 +195,20 @@ class Render {
                 .on("click", markSpecies)
                 .on("dblclick", zoomInSpecies);
             
-        
-       
-
         function zoomInSpecies (d) 
         {
             if (!renderer.dblclicked) {
                 d3.selectAll(".treeNodes").transition().duration(200).remove();
                 d3.selectAll(".treeSpecies").transition().duration(500).style("fill-opacity", 0);
+                //d3.select(".legend-container").style("opacity", 0);
+
                 let element = d;
                 let zoomDOM = d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id);
                 renderer.zoomHeight = zoomDOM.select("rect").attr("height");
                 renderer.zoomWidth = zoomDOM.select("rect").attr("width");
                 renderer.zoomTransform = zoomDOM.attr("transform");
 
-                console.log(renderer.zoomTransform);
+                
 
                 d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id)
                 .transition()
@@ -221,10 +220,10 @@ class Render {
                     .attr("width", width )
                     .attr("height", height )
                     .style("fill-opacity", 1);
-                    
-                console.log("zoom in");
+     
                 renderer.dblclicked = true;
                 renderer.zoomId = element.data.id;
+                renderer.renderForceDirected(d.data, d.data.id, height, width);
            
             }
         }
@@ -320,10 +319,84 @@ class Render {
         }
     }
 
-    renderForceDirected(data, id) {
-        let forceContainer = d3.select(id).append("g");
+    renderForceDirected(data, id, height, width) {
+        let renderer = this;
+        let nodeData = data.data.generateForceDirectedNodes();
+        let linkData = data.data.generateForceDirectedLinks();
+
+        let forceContainer = d3.selectAll(".treeSpecies").filter(d => d.data.id === id)
+            .append("svg").attr("id", "force-container")
+            .attr("height", height)
+            .attr("width", width);
+ 
+        let simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id( d => d.id ))
+            .force("charge", d3.forceManyBody())
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        let link = forceContainer.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(linkData)
+            .enter().append("line")
+            .attr("stroke-width", d => Math.sqrt(d.value) );
+
+        let node = forceContainer.append("g")
+            .attr("class", "nodes")
+            .selectAll("circle")
+            .data(nodeData)
+            .enter().append("circle")
+            .attr("r", 10)
+            .attr("fill", d => renderer.coloring[d.label] )
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+                
+        node.append("title")
+            .text(function(d) { return d.id; });
+
+        simulation
+            .nodes(nodeData)
+            .on("tick", ticked);
+
+        simulation.force("link")
+            .links(linkData);
+
+        function ticked() {
+                link
+                    .attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+
+                node
+                    .attr("cx", function(d) { return d.x; })
+                    .attr("cy", function(d) { return d.y; });
+            }
+
+            function dragstarted(d) {
+                if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended(d) {
+                if (!d3.event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+
+
         
-    }
+
+       
 
     removeNodes() {
         d3.selectAll(".treeNodes").remove();
