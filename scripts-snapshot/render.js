@@ -99,10 +99,12 @@ class Render {
                     .attr("transform", renderer.zoomTransform )           
                 .select("rect")
                     .attr("width", d => { return renderer.zoomWidth; })
-                    .attr("height", d => { return renderer.zoomHeight; })
+                    .attr("height", d => { return renderer.zoomHeight; });
             
-            renderer.dblclicked = false;
+            //d3.selectAll(".treeSpecies").select("rect").style("pointer-events", "all");
+            //d3.selectAll(".treeRect").style("pointer-events", "none");
             d3.select("#force-container").remove();
+            renderer.dblclicked = false;
             //("zoomout");
         }
         controller.append("text")
@@ -123,13 +125,6 @@ class Render {
         //container.call(zoom);
         //container.call(d3.drag().on('drag', () => svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
         /* add behavior for reset zoom button */
-
-        d3.select("#resetButton").on("click", reset);
-
-        function reset() {
-            container.transition().duration(750)
-            .call(zoom.transform, d3.zoomIdentity);
-        }
         
         this.coloring = {};
         this.marking = {};
@@ -139,7 +134,7 @@ class Render {
 
     rerender() {
         d3.selectAll(".treeSpecies").transition().duration(750).style("fill-opacity", 1);
-        d3.select(".legend-container").style("opacity", 1);
+        //d3.select(".legend-container").style("opacity", 1);
         this.renderNodes();
     }
 
@@ -179,13 +174,13 @@ class Render {
             .attr("id", d => d.data.id)
             .attr("transform", d => { let x = d.x0 + (layout.margin.left + layout.margin.right)/2;
                                             let y = d.y0 + (layout.margin.top + layout.margin.bottom)/2 + 20;
-                                            return "translate(" + x + "," + y + ")"; })
+                                            return "translate(" + x + "," + y + ")"; });
 
 
         cell.append("rect")
                 .attr("width", d => { return d.x1 - d.x0; })
                 .attr("height", d => { return d.y1 - d.y0; })
-                .attr("fill", d => { return "grey"; })
+                .attr("fill", d => { return "grey"; });
 
         cell.merge(cell.select("rect"))
                 .attr("width", d => { return d.x1 - d.x0; })
@@ -197,13 +192,25 @@ class Render {
             
         function zoomInSpecies (d) 
         {
+         
             if (!renderer.dblclicked) {
                 d3.selectAll(".treeNodes").transition().duration(200).remove();
-                d3.selectAll(".treeSpecies").transition().duration(500).style("fill-opacity", 0);
-                //d3.select(".legend-container").style("opacity", 0);
+                d3.selectAll(".treeSpecies")
+                    .transition().duration(500).style("fill-opacity", 0)
+                    .select("rect")
+                    .style('pointer-events', 'none');
+                    //d3.select(".legend-container").style("opacity", 0);
 
                 let element = d;
-                let zoomDOM = d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id);
+                   console.log(element.data.id);
+                let zoomDOM = d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id)
+                    .style("fill-opacity", 1);
+                zoomDOM
+                    .transition().duration(600)
+                    .select("rect")
+                    .style("fill", "grey")
+                    .style("pointer-events", "all");
+
                 renderer.zoomHeight = zoomDOM.select("rect").attr("height");
                 renderer.zoomWidth = zoomDOM.select("rect").attr("width");
                 renderer.zoomTransform = zoomDOM.attr("transform");
@@ -218,8 +225,7 @@ class Render {
                     .duration(750)                   
                     .select("rect")
                     .attr("width", width )
-                    .attr("height", height )
-                    .style("fill-opacity", 1);
+                    .attr("height", height );
      
                 renderer.dblclicked = true;
                 renderer.zoomId = element.data.id;
@@ -312,8 +318,8 @@ class Render {
                         } 
                         if (renderer.marking[d.parent.data.name] === 1)
                             return renderer.coloring[d.data.name].darker();
-                        return renderer.coloring[d.data.name]; })
-                    .style('pointer-events', 'none');
+                        return renderer.coloring[d.data.name]; });
+                    //.style('pointer-events', 'none');
 
             node.exit().remove();
         }
@@ -321,17 +327,40 @@ class Render {
 
     renderForceDirected(data, id, height, width) {
         let renderer = this;
+        let radius = 2000/data.data.data.length > 8 ? 8 : 2000/data.data.data.length;
         let nodeData = data.data.generateForceDirectedNodes();
         let linkData = data.data.generateForceDirectedLinks();
 
+        let zoom = d3.zoom()
+            .scaleExtent([1, 10])
+            .translateExtent([[0, 0], [width + 20 , height + 20]])
+            .on("zoom", zoomed);
+
         let forceContainer = d3.selectAll(".treeSpecies").filter(d => d.data.id === id)
             .append("svg").attr("id", "force-container")
-            .attr("height", height)
-            .attr("width", width);
+            .attr("height", height )
+            .attr("width", width )
+            .append("g");
+            
+        
+        let zoomRect = d3.selectAll(".treeSpecies").filter(d => d.data.id === id).select("rect")
+        zoomRect.call(zoom);
+        
+        /*add reset button functionality */
+        d3.select("#resetButton").on("click", reset);
+
+        function reset() {
+            zoomRect.transition().duration(1000)
+            .call(zoom.transform, d3.zoomIdentity);
+        }
+        
+        function zoomed() {
+            forceContainer.attr("transform", d3.event.transform);
+        }
  
         let simulation = d3.forceSimulation()
-            .force("link", d3.forceLink().id( d => d.id ))
-            .force("charge", d3.forceManyBody())
+            .force("link", d3.forceLink().id( d => d.id ).distance(30))
+            .force("charge", d3.forceManyBody().strength(-8))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
         let link = forceContainer.append("g")
@@ -346,13 +375,13 @@ class Render {
             .selectAll("circle")
             .data(nodeData)
             .enter().append("circle")
-            .attr("r", 10)
+            .attr("r", radius)
             .attr("fill", d => renderer.coloring[d.label] )
             .call(d3.drag()
                 .on("start", dragstarted)
                 .on("drag", dragged)
                 .on("end", dragended));
-                
+
         node.append("title")
             .text(function(d) { return d.id; });
 
@@ -365,38 +394,32 @@ class Render {
 
         function ticked() {
                 link
-                    .attr("x1", function(d) { return d.source.x; })
-                    .attr("y1", function(d) { return d.source.y; })
-                    .attr("x2", function(d) { return d.target.x; })
-                    .attr("y2", function(d) { return d.target.y; });
+                    .attr("x1", d => d.source.x )
+                    .attr("y1",  d => d.source.y )
+                    .attr("x2",  d => d.target.x )
+                    .attr("y2", d => d.target.y );
 
-                node
-                    .attr("cx", function(d) { return d.x; })
-                    .attr("cy", function(d) { return d.y; });
+                node.attr("cx", d => d.x = Math.max(radius, Math.min(width - radius - 2, d.x)) )
+                    .attr("cy", d => d.y = Math.max(radius, Math.min(height - radius - 2, d.y)) );
             }
 
-            function dragstarted(d) {
-                if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            }
-
-            function dragged(d) {
-                d.fx = d3.event.x;
-                d.fy = d3.event.y;
-            }
-
-            function dragended(d) {
-                if (!d3.event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            }
+        function dragstarted(d) {
+            if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
         }
 
+        function dragged(d) {
+            d.fx = d3.event.x;
+            d.fy = d3.event.y;
+        }
 
-        
-
-       
+        function dragended(d) {
+            if (!d3.event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
 
     removeNodes() {
         d3.selectAll(".treeNodes").remove();

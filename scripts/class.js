@@ -405,7 +405,7 @@ class DataStorage {
             nodeObj.label = nodes[node].label;
             nodeList.push(nodeObj);
         }
-        console.log(nodeList);
+        //console.log(nodeList);
         return nodeList;
         
     }
@@ -424,7 +424,7 @@ class DataStorage {
                     linkObj.sourceSite = currentSite.id;
                     linkObj.target = currentLink.nodeId;
                     linkObj.targetSite = currentLink.siteId;
-                    linkObj.value = 2;
+                    linkObj.value = 0.5;
                     linkList.push(linkObj);
                 }
             }
