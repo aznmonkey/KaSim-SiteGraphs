@@ -326,8 +326,10 @@ class Render {
     }
 
     renderForceDirected(data, id, height, width) {
+        /* modified version of mike bostocks force directed graph using d3 */
         let renderer = this;
-        let radius = 2000/data.data.data.length > 8 ? 8 : 2000/data.data.data.length;
+        let dataLength = data.data.data.length;
+        let radius = 2000 / dataLength > 8 ? 8 : 2000 / dataLength;
         let nodeData = data.data.generateForceDirectedNodes();
         let linkData = data.data.generateForceDirectedLinks();
 
@@ -343,7 +345,7 @@ class Render {
             .append("g");
             
         
-        let zoomRect = d3.selectAll(".treeSpecies").filter(d => d.data.id === id).select("rect")
+        let zoomRect = d3.selectAll(".treeSpecies").filter(d => d.data.id === id).select("rect");
         zoomRect.call(zoom);
         
         /*add reset button functionality */
@@ -360,7 +362,7 @@ class Render {
  
         let simulation = d3.forceSimulation()
             .force("link", d3.forceLink().id( d => d.id ).distance(30))
-            .force("charge", d3.forceManyBody().strength(-8))
+            .force("charge", d3.forceManyBody().strength(dataLength > 500 ? -1: -8))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
         let link = forceContainer.append("g")

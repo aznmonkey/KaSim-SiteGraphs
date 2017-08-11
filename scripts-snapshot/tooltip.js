@@ -13,14 +13,14 @@ class SnapUIManager {
            /* add button functionality */
         
         let timeout = d3.timeout(function() {
-            d3.select("input[value=\"sumByMass\"]")
+            d3.select("input[value=\"sumBySize\"]")
                 .property("checked", true)
                 .dispatch("change");
         }, 10);
         
         
         d3.selectAll("input")
-            .data([sumByMass, sumByCount, sumBySize], function(d) { return d ? d.name : this.value; })
+            .data([sumBySize, sumByCount, sumByMass], function(d) { return d ? d.name : this.value; })
             .on("change", changed);
 
         function changed(sum) {
