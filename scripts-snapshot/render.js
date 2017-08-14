@@ -370,10 +370,14 @@ class Render {
         let simulation = d3.forceSimulation()
             .force('x', d3.forceX(width/2).strength(0.008))
             .force('y', d3.forceY(height/2).strength(0.008))
-            .force("link", d3.forceLink().id( d => d.id ).distance(20))
+            .force("link", d3.forceLink().id( d => d.id ).distance(linkStrength(dataLength)))
             .force("charge", d3.forceManyBody().strength(bodyStrength(dataLength)))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
+        /* function for calculating link strength */
+        function linkStrength(n) {
+            return 20 + 40/n;
+        }
         /* function for reducing strength for large datasets */
         function bodyStrength(n) {
             return -3 - 30/Math.sqrt(n); 
