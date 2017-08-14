@@ -92,6 +92,8 @@ class Render {
 
     
         function zoomout () {
+            d3.select("form").selectAll("input")
+            .attr('disabled', null);
             d3.select("#force-container").remove();
             renderer.rerender();
             d3.selectAll(".treeSpecies").filter(d => d.data.id === renderer.zoomId)
@@ -190,7 +192,8 @@ class Render {
             
         function zoomInSpecies (d) 
         {
-         
+            d3.select("form").selectAll("input")
+                .attr('disabled', true);
             if (!renderer.dblclicked) {
                 d3.selectAll(".treeNodes").transition().duration(200).remove();
                 d3.selectAll(".treeSpecies")
@@ -332,7 +335,7 @@ class Render {
         /* modified version of mike bostocks force directed graph using d3 */
         let renderer = this;
         let dataLength = data.data.data.length;
-        let radius = 2000 / dataLength > 8 ? 8 : 2000 / dataLength;
+        let radius = 4 + 12 / Math.sqrt(dataLength);
         let nodeData = data.data.generateForceDirectedNodes();
         let linkData = data.data.generateForceDirectedLinks();
 
@@ -365,13 +368,17 @@ class Render {
         
         
         let simulation = d3.forceSimulation()
-            .force('x', d3.forceX(width/2).strength(0.005))
-            .force('y', d3.forceY(height/2).strength(0.005))
+            .force('x', d3.forceX(width/2).strength(0.008))
+            .force('y', d3.forceY(height/2).strength(0.008))
             .force("link", d3.forceLink().id( d => d.id ).distance(20))
-            .force("charge", d3.forceManyBody().strength(dataLength > 500 ? -2: -10))
+            .force("charge", d3.forceManyBody().strength(bodyStrength(dataLength)))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
-              
+        /* function for reducing strength for large datasets */
+        function bodyStrength(n) {
+            return -3 - 30/Math.sqrt(n); 
+        }
+
         let link = forceContainer.append("g")
             .attr("class", "links")
             .selectAll("line")
@@ -409,7 +416,7 @@ class Render {
                     .attr("y2", d => d.target.y );
 
                 node.attr("cx", d => d.x = Math.max(radius, Math.min(width - radius - 2, d.x)) )
-                    .attr("cy", d => d.y = Math.max(radius, Math.min(height - radius - 2, d.y)) );
+                    .attr("cy", d => d.y = Math.max(radius, Math.min(height - radius - 10, d.y)) );
             }
 
         function dragstarted(d) {
