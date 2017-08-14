@@ -169,6 +169,18 @@ class Node extends D3Object {
             site.setId(i); 
             return site;
         });
+
+        /* make fake empty site if no site is present on agent */
+        if (nodeData.site_node_sites.length === 0) {
+                this.sites = [];
+                let siteData = {};
+                siteData.site_name = null;
+                siteData.site_links = [];
+                siteData.site_states = [];
+                let site = new Site(siteData,this);
+                site.setId(-1);
+                this.sites.push(site);
+        }
         
     }
     
@@ -199,7 +211,10 @@ class Node extends D3Object {
     }
 
     listSites() {
+        
+       
         return this.sites;
+
     }
 
     getSite(siteId) {

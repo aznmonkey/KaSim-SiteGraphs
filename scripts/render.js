@@ -550,7 +550,9 @@ class Render {
         let node = d3.pie() 
                     .sort(null)
                     .value(function(d) {
+                        console.log(d.listSites().length);
                         return d.listSites().length;
+
                     });                    
 
         
@@ -644,6 +646,7 @@ class Render {
                 let label = d.data.label;
                 d.data.startAngle = d.startAngle;
                 d.data.endAngle = d.endAngle;
+                if (label === null) return;
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
         

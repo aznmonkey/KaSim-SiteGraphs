@@ -27,3 +27,11 @@ form {
   stroke:white;
   stroke-opacity: 0.6;
 }
+
+.treeSpecies {
+  fill-opacity: 1;
+}
+
+.treeSpecies-hidden {
+  fill-opacity: 0;
+}

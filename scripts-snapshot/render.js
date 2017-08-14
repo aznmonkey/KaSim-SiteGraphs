@@ -92,6 +92,7 @@ class Render {
 
     
         function zoomout () {
+            d3.select("#force-container").remove();
             renderer.rerender();
             d3.selectAll(".treeSpecies").filter(d => d.data.id === renderer.zoomId)
                 .transition()
@@ -101,11 +102,8 @@ class Render {
                     .attr("width", d => { return renderer.zoomWidth; })
                     .attr("height", d => { return renderer.zoomHeight; });
             
-            //d3.selectAll(".treeSpecies").select("rect").style("pointer-events", "all");
-            //d3.selectAll(".treeRect").style("pointer-events", "none");
-            d3.select("#force-container").remove();
             renderer.dblclicked = false;
-            //("zoomout");
+
         }
         controller.append("text")
             .attr("dy", "1em")
@@ -133,7 +131,7 @@ class Render {
     }
 
     rerender() {
-        d3.selectAll(".treeSpecies").transition().duration(750).style("fill-opacity", 1);
+        d3.selectAll(".treeSpecies").classed("treeSpecies-hidden", false);
         //d3.select(".legend-container").style("opacity", 1);
         this.renderNodes();
     }
@@ -196,18 +194,23 @@ class Render {
             if (!renderer.dblclicked) {
                 d3.selectAll(".treeNodes").transition().duration(200).remove();
                 d3.selectAll(".treeSpecies")
-                    .transition().duration(500).style("fill-opacity", 0)
+                    .classed("treeSpecies-hidden", true)
+                .transition().duration(750)
                     .select("rect")
                     .style('pointer-events', 'none');
                     //d3.select(".legend-container").style("opacity", 0);
 
                 let element = d;
                    console.log(element.data.id);
-                let zoomDOM = d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id)
-                    .style("fill-opacity", 1);
+                   
+                let zoomDOM = d3.selectAll(".treeSpecies").filter(d => d.data.id === element.data.id).raise();
+                    
+
                 zoomDOM
-                    .transition().duration(600)
-                    .select("rect")
+                .classed("treeSpecies-hidden", false)
+                    .transition().duration(1000)
+                    
+                .select("rect")                    
                     .style("fill", "grey")
                     .style("pointer-events", "all");
 
@@ -359,12 +362,16 @@ class Render {
         function zoomed() {
             forceContainer.attr("transform", d3.event.transform);
         }
- 
+        
+        
         let simulation = d3.forceSimulation()
-            .force("link", d3.forceLink().id( d => d.id ).distance(30))
-            .force("charge", d3.forceManyBody().strength(dataLength > 500 ? -1: -8))
+            .force('x', d3.forceX(width/2).strength(0.005))
+            .force('y', d3.forceY(height/2).strength(0.005))
+            .force("link", d3.forceLink().id( d => d.id ).distance(20))
+            .force("charge", d3.forceManyBody().strength(dataLength > 500 ? -2: -10))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
+              
         let link = forceContainer.append("g")
             .attr("class", "links")
             .selectAll("line")
