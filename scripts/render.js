@@ -113,16 +113,12 @@ class Render {
         this.outerRadius = this.radius - this.padding;
         this.innerRadius = this.radius - this.nodew - this.padding;
         this.siteRadius = 1.5 * this.radius/(this.siteList.length) > 6 ? 6: 1.5 * this.radius/(this.siteList.length);
-        this.renderDonut();
         this.renderLinks();
-        console.log("hi");
+        this.renderDonut();
         this.renderSitetoEdgeLinks();
-        console.log("before renderStates");
         this.renderStates();
-        console.log("after renderstates");
         //this.checkStateCollusion(110);
     }
-
     rerender() {
         this.rerenderNodes();
         this.rerenderLinks();
@@ -206,7 +202,7 @@ class Render {
             .attr("d", line)
             .attr("stroke", "steelblue")
             .attr("stroke-width", 2)
-            .attr("fill", "none")
+            .attr("fill", "white")
             .style("stroke-opacity", opacity.line_normal)
             .on("mouseover", mouseoverLink)
             .on("mouseout", mouseoutLink)
@@ -372,17 +368,17 @@ class Render {
             .attr('transform', d => 'rotate(' + d.getAngle() * 180/Math.PI + ')');
 
         siteLine.append('line')
-            .attr('opacity', 0.5)
+            .attr('opacity',  d => {if (d.label === null) return 0; return 0.5;} )
             .attr('stroke', function(d) { return d.agent.color; })
             .attr('stroke-dasharray', [2,2])
             .attr('stroke-width', 2)
             .attr('x1', this.innerRadius + siteRadius)
-            .attr('x2', this.outerRadius - siteRadius)
+            .attr('x2', this.outerRadius)
             .style('pointer-events', 'none');
     }
 
     renderStates() {
-        let paddingSite = calculateTextWidth("110%") * 1.2;
+        let paddingSite = calculateTextWidth("110%") * 1.5;
         let siteRadius = this.siteRadius;
         let lineScale = this.radius/60;
         let lineLength;   
@@ -392,7 +388,7 @@ class Render {
         let siteNum = this.siteNum = this.siteList.length;
         for (let sIndex in this.siteList) {
             let site = this.siteList[sIndex];
-            let textLength = this.radius/120 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.id === site.id && d.data.agent.id === site.agent.id ;}).node().getComputedTextLength() + paddingSite;
+            let textLength = this.radius/30 + this.svg.selectAll(".siteText").filter( function(d) { return d.data.id === site.id && d.data.agent.id === site.agent.id ;}).node().getComputedTextLength() + paddingSite;
                 let gState = this.svg.selectAll('.stateLink')
                     .data(this.siteList);
 
@@ -494,6 +490,7 @@ class Render {
                         if (i > 0) {
                             let thisbb = this.getBoundingClientRect(),
                                 prevbb = prev.getBoundingClientRect();
+
                             if(!(thisbb.right < prevbb.left || 
                                 thisbb.left > prevbb.right || 
                                 thisbb.bottom < prevbb.top || 
@@ -542,10 +539,8 @@ class Render {
 
         let node = d3.pie() 
                     .sort(null)
-                    .value((d) => {
-                        //console.log(d.listSites().length);
+                    .value(function(d) {
                         return d.listSites().length;
-
                     });                    
 
         
@@ -575,7 +570,7 @@ class Render {
             .attr("class", "nodeArcPath")
             .attr("d", nodeArc)
             //.attr("id", function(d,i) { return "nodeArc_" + i;})
-            .style("fill", function(d,i) { 
+            .style("fill", (d,i) => { 
                 d.clicked = 0;
                 d.data.color = d3.rgb(c20(i)).darker(1);
                 return d3.rgb(c20(i)).brighter(0.5);})
@@ -585,15 +580,18 @@ class Render {
         /* render invisible text arc path */
         gNode.append("path")
             .attr("d", nodeTextArc)
-            .attr("id", function(d,i) { return "nodeTextArc_" + i;})
-            .style("fill", "transparent");
+            .attr("class", "nodeTextArc")
+            .attr("id", (d,i) => { return "nodeTextArc_" + i;})
+            .style("fill", "none")
+            .style("stroke-width", 0)
+            .style("stroke", "transparent");
 
         /* render node text */
         gNode.append("text")
             .append("textPath")
             .attr('alignment-baseline', "middle")
-            .attr("xlink:href",  function(d,i) { return "#nodeTextArc_" + i;})
-            .attr("startOffset", function (d) {
+            .attr("xlink:href",  (d,i) => { return "#nodeTextArc_" + i;})
+            .attr("startOffset", (d) => {
                 if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 2 * Math.PI) { 
                     return  "25%"; }
                 else if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >=  2 * Math.PI &&  (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 3 * Math.PI) { 
@@ -603,10 +601,10 @@ class Render {
                     return "25%";
             })
             .style("text-anchor", "middle")
-			.style('font-size', "110%")
-            .style("fill", function(d,i) { return d.data.color.darker(2);})
+            .style('font-size', "110%")
+            .style("fill", (d,i) => { return d.data.color.darker(2);})
             .style('pointer-events', 'none')
-            .text(function(d) { 
+            .text( d => { 
                 let label = d.data.label;
                 label = label.length > 10 ? label.substring(0,8): label;
                 if (d.endAngle - d.startAngle < label.length/50) {
@@ -614,18 +612,17 @@ class Render {
                 }
                 return label; });
 
-
         
         /* render site text */
         gSite.append("text")
-            .attr("text-anchor", function (d) {
+            .attr("text-anchor", d => {
                 if ( (d.startAngle + d.endAngle + 3 * Math.PI ) / 2 < 5 * Math.PI/2) { 
                     return  "start"; }
                 else 
                     return "end"; })
             .attr("class", "siteText siteText--normal")
             .attr('alignment-baseline', "middle")
-            .attr("transform", function(d) {
+            .attr("transform", d => {
                 let xy = siteArc.centroid(d) ;
                 let angle = ( d.startAngle + d.endAngle + 3 * Math.PI ) / 2;
                 if ( ((d.startAngle + d.endAngle + 3 * Math.PI ) / 2 >= 5 * Math.PI/2)) {
@@ -633,19 +630,20 @@ class Render {
                 } 
                 return "translate(" + xy + ") rotate(" + angle * 180/Math.PI + ")";
             })
-			.style('font-size', "110%")
-            .style("fill", function(d, i) { return d.data.agent.color; })
-            .text(function(d) { 
+            .style('font-size', "110%")
+            .style("fill", (d, i) => { return d.data.agent.color; })
+            .text( d => { 
                 let label = d.data.label;
+                if (label === null) return;
                 d.data.startAngle = d.startAngle;
                 d.data.endAngle = d.endAngle;
-                if (label === null) return;
                 label = label.length > 10 ? label.substring(0,8): label;
                 return label; });
         
         let gSiteNodes = gSite.data(siteList);
 
         // render inner sites
+        /*
         gSiteNodes
             .append("circle")
             .attr('cx', function(d) {
@@ -655,27 +653,19 @@ class Render {
                 return d.cartY(innerRadius);
             })
             .attr('r', siteRadius)
-            .attr("fill", function(d) {
-                return d.agent.color; 
-            })
+            .attr("fill", "none")
             .on("mouseover", mouseoverInnerSite)
             .on("mouseout", mouseoutInnerSite);
-
+        */
         // render outer sites
         gSiteNodes
             .append("circle")
             .attr('class', 'outerSite')
-            .attr('cx', function(d) {
-                return d.cartX(outerRadius);
-            })
-            .attr('cy', function(d) {
-                return d.cartY(outerRadius);
-            })
-            .attr('r', siteRadius)
-            .attr("stroke", function(d) { 
-                return d.agent.color; 
-            })
-            .attr("fill", function(d,i) {
+            .attr('cx', d => d.cartX(innerRadius))
+            .attr('cy', d => d.cartY(innerRadius))
+            .attr('r', d => { if (d.label === null) return 0; return siteRadius;})
+            .attr("stroke", d => d.agent.color)
+            .attr("fill", (d,i) => {
                 d.currentColor = d.agent.color; 
                 return d.agent.color; 
 
@@ -686,14 +676,19 @@ class Render {
             
         // render self loops
         var selfLoopLine = d3.line()
-                        .x(function(d){return d.x;})
-                        .y(function(d){return d.y;})
+                        .x( d => d.x )
+                        .y( d => d.y )
                         .curve(d3.curveBundle.beta(1));
 
         gSiteNodes
-            .filter(function(d) {for (let link in d.links) {return d.links[link].siteId === d.id && d.links[link].nodeId === d.getAgent().id; }})
+           .filter(d => {for (let link in d.links) {
+                if (d.links[link].siteId === d.id && d.links[link].nodeId === d.getAgent().id)
+                    return true;
+                if (link === d.links.length - 1)
+                    return false;
+            }})
             .append("path")
-            .attr("d", function(d) {
+            .attr("d", d => {
                 let pathObj = d.generateSelfLoopPath(innerRadius);
                 return selfLoopLine(pathObj);
             })
@@ -748,8 +743,8 @@ class Render {
             links
                 .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
                 .style("stroke-width", 8)
-                .style("stroke-opacity", opacity.line_highlight)
-                .raise();  
+                .style("stroke-opacity", opacity.line_highlight);
+                //.raise();  
 
             selfLoops
                 .style("stroke", node.data.color.brighter())
@@ -793,7 +788,7 @@ class Render {
 
             tip.hide();
         }
-
+/*
         function mouseoverInnerSite(d) {
             if(d.links.length > 0) {
                 let event = this;
@@ -853,18 +848,73 @@ class Render {
                 renderer.resetLinksAndEdges();
             }
         }
-
+*/
         function mouseoverSite(d) {
             let site = d;   
             //console.log(this);
             tip.showSite(site);
-            renderer.adjustState(site, this, false, true, true);            
+            
+            renderer.adjustState(site, this, false, true, true); 
+            if(d.links.length > 0) {
+                let event = this;
+                let innerSite = d;
+                let targetSites = [];
+                if(d == null) {
+                    return;
+                }
+
+                svg.selectAll(".link").style("stroke-opacity", opacity.line_hidden);
+                svg.selectAll(".selfLoop").style("stroke-opacity", opacity.line_hidden);
+                svg.selectAll(".siteText").filter(".siteText--normal").attr("opacity", 0.4);
+                let links = svg.selectAll(".link").filter( d => { 
+                    let siteS = {};
+                    let siteT = {};
+                    if(d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id) {
+                        siteT.id = d.target.data.id ;
+                        siteT.parentId = d.target.data.parentId;
+                        siteS.id = d.source.data.id ;
+                        siteS.parentId = d.source.data.parentId;
+                        targetSites.push(siteS);
+                        targetSites.push(siteT);  
+                    }
+                    return d.target.data.parentId === innerSite.getAgent().id && d.target.data.id === innerSite.id;
+                });  
+
+                let selfLoops = svg.selectAll(".selfLoop").filter( d => { 
+                    return d.getAgent().id === innerSite.getAgent().id && d.id === innerSite.id;
+                });  
+
+                links
+                    .style("stroke", d => data.getNode(d.source.data.parentId).color.brighter() )
+                    .style("stroke-width", 8)
+                    .style("stroke-opacity", opacity.line_highlight); 
+
+                selfLoops
+                    .style("stroke", innerSite.getAgent().color.brighter())
+                    .style("stroke-width", 8)
+                    .style("stroke-opacity", opacity.line_highlight); 
+
+                targetSites = targetSites.map( d => data.getSite(d.parentId, d.id) );
+                let targetTexts = svg.selectAll(".siteText").filter( d => targetSites.includes( d.data ) );
+            
+                targetTexts
+                    .attr("opacity", 1)
+                    .style("font-weight", "bold")
+                    .style("font-size", "150%");
+            }           
         }
 
         function mouseoutSite(d) {
             let site = d;          
             tip.hide(); 
-            renderer.adjustState(site, this, true, true, false);    
+            renderer.adjustState(site, this, true, true, false);   
+            if(d.links.length > 0) {
+                let event = this;
+                let innerSite = d;
+                let links = innerSite.links;
+                let targetSites = [];
+                renderer.resetLinksAndEdges();
+            } 
         }
 
         function clickSite(d) {
@@ -930,21 +980,21 @@ class Render {
     }
 
     adjustState(site, circle, hide, text, textMove) {
-        let paddingSite = calculateTextWidth("110%") * 1.2;
+        let paddingSite = calculateTextWidth("110%") * 1.5;
         let siteRadius = this.siteRadius;
         let radius = this.radius;
         let outerRadius = this.outerRadius;
         let siteNum = this.siteNum;
         let lineScale = radius/60;
-        d3.select(circle).style("fill", function() {                
-                return site.currentColor;
-            }).attr("r", function() { 
+        d3.select(circle).style("fill", () => site.currentColor)
+            .style("opacity", 1)
+            .attr("r", () => { 
                 if(!hide) {
                     return siteRadius * 2; }
                 else {
                     return siteRadius; 
                 }
-            });
+            }).raise();
             
             let siteText = this.svg.selectAll(".siteText").filter( d => { return d.data.label === site.label && d.data.agent.label === site.agent.label; });
             let transform = getTransform(siteText);
@@ -979,7 +1029,7 @@ class Render {
             }
 
             let stateLine = d3.select("#stateLink" + "a" + site.agent.id + "s" + site.id);
-            let textLength = siteText.node().getComputedTextLength() + paddingSite + this.radius/120;
+            let textLength = siteText.node().getComputedTextLength() + paddingSite + this.radius/30;
             let lineLength;
             if (!hide) {
                 adjustStateLines(true);
