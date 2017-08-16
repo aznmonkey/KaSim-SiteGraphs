@@ -41,7 +41,6 @@ class ContactMap {
             else {
                 Error('no data');
             }
-            
         });
         
     }
@@ -61,7 +60,6 @@ class Render {
         let width = layout.dimension.width;
         let height = layout.dimension.height;
         this.layout = layout;
-        //console.log(layout);
         /* create svg to draw contact maps on */
           // tooltip
         let svgWidth = width +
@@ -76,14 +74,6 @@ class Render {
             .append("svg")
             .attr("class", "svg-group")
             .attr("id", "map-container")
-            /*
-            .attr("width", width +
-                            this.layout.margin.left +
-                            this.layout.margin.right)
-            .attr("height", height +
-                            this.layout.margin.top +
-                            this.layout.margin.bottom); 
-            */
             .attr("preserveAspectRatio", "xMinYMin meet")
             .attr("viewBox", "0 0 " + svgWidth + " " + svgHeight );
          this.svg = container.append('g')
@@ -125,8 +115,11 @@ class Render {
         this.siteRadius = 1.5 * this.radius/(this.siteList.length) > 6 ? 6: 1.5 * this.radius/(this.siteList.length);
         this.renderDonut();
         this.renderLinks();
+        console.log("hi");
         this.renderSitetoEdgeLinks();
+        console.log("before renderStates");
         this.renderStates();
+        console.log("after renderstates");
         //this.checkStateCollusion(110);
     }
 
@@ -549,8 +542,8 @@ class Render {
 
         let node = d3.pie() 
                     .sort(null)
-                    .value(function(d) {
-                        console.log(d.listSites().length);
+                    .value((d) => {
+                        //console.log(d.listSites().length);
                         return d.listSites().length;
 
                     });                    

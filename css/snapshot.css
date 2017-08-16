@@ -1,3 +1,10 @@
+body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
 #resetButton {
     margin-left: 30px;
 }
@@ -24,14 +31,34 @@ form {
 }
 
 .links line {
-  stroke:white;
-  stroke-opacity: 0.6;
+    stroke:white;
+    stroke-opacity: 0.6;
 }
 
 .treeSpecies {
-  fill-opacity: 1;
+    fill-opacity: 1;
 }
 
 .treeSpecies-hidden {
-  fill-opacity: 0;
+    fill-opacity: 0;
+}
+
+#header {
+    flex: 0;
+    margin-bottom: 5;
+}
+#draw-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    flex: 1;
+}
+
+#drawing {
+    flex:4;
+}
+
+#legend {
+    flex:1;
+
 }

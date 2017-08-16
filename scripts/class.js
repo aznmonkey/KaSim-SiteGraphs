@@ -422,6 +422,13 @@ class DataStorage {
         }
         //console.log(nodeList);
         return nodeList;
+    }
+
+    addForceDirectedSites(node) {
+
+    }
+
+    removeForceDirectedSites(node) {
         
     }
 
@@ -448,6 +455,14 @@ class DataStorage {
         return linkList;
     }
 
+    addForceDirectedLinks(node) {
+        
+     }
+        
+    removeForceDirectedLinks(node) {
+        
+    }
+
     packageLinks(nodes) {
      
         let map = {},
@@ -455,7 +470,7 @@ class DataStorage {
 
         // Compute a map from name to node.
         nodes.forEach(function(d) {
-            //console.log(d);
+            console.log(d);
             map[d.data.name] = d;
         });
 

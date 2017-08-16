@@ -91,7 +91,7 @@ class SnapUIManager {
         } );
         
 
-        let legendSVG = d3.select("#drawing")
+        let legendSVG = d3.select("#legend")
             .append("svg")
             .attr("class", "legend-container")   
             .attr("height", (legendRectSize + legendSpacing) * dataArray.length + 2 * padding )

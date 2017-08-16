@@ -22,14 +22,12 @@ class Snapshot {
         /* populates the data */
         parser.readJson(json, true).then( (response) => {
             snapshot.data = response;
-            //console.log(snapshot.data);
-
             let margin = { top: 10, right: 10,
             bottom: 10, left: 10 };
             let w = window.innerWidth - margin.left - margin.right;
-            let h = window.innerHeight - margin.top - margin.bottom - 25.5 - 20 - 5;
+            let h = window.innerHeight - margin.top - margin.bottom;
             if (response) {
-                let layout = new Layout(snapshot, new Dimension(w * 4/5, h), margin);
+                let layout = new Layout(snapshot, new Dimension(w, h), margin);
                 let renderer = new Render(snapshot.id, layout);
                 snapshot.clearData();
                 renderer.render();
@@ -116,16 +114,6 @@ class Render {
         let svg = this.svg = container.append('g').attr("id", "snapshot");
         let data = this.layout.snapshot.data;
         data.generateTreeData();
-        //console.log(treeData);
-        //function zoomed() {
-        //    svg.attr('transform', d => d3.event.transform );
-        //}
-
-        //let zoom = d3.zoom().scaleExtent([0.5, 10]).on('zoom', zoomed);
-        //container.call(zoom);
-        //container.call(d3.drag().on('drag', () => svg.attr('transform', 'translate(' + d3.event.x + ',' + d3.event.y +')')));
-        /* add behavior for reset zoom button */
-        
         this.coloring = {};
         this.marking = {};
         this.tooltip = new SnapUIManager(this);
